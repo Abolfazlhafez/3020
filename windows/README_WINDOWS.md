@@ -23,7 +23,7 @@ Create a compact, framework-dependent x64 publish folder. The app needs the .NET
 ```powershell
 dotnet publish .\windows\FoxyVPN.Windows\FoxyVPN.Windows.csproj `
   --configuration Release --runtime win-x64 --self-contained false `
-  -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true `
+  -p:PublishSingleFile=true `
   --output .\artifacts\portable
 ```
 
