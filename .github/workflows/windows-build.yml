@@ -141,6 +141,16 @@ jobs:
           $license = Get-ChildItem -Path $extract -Recurse -Filter 'prebuilt-binaries-license.txt' | Select-Object -First 1
           if ($license) { Copy-Item $license.FullName (Join-Path $nativeOut 'WINTUN-PREBUILT-LICENSE.txt') -Force }
 
+      - name: Generate Windows app icon from the blue-white fox artwork
+        shell: pwsh
+        run: |
+          choco install imagemagick --yes --no-progress
+          $iconSource = Join-Path $env:GITHUB_WORKSPACE 'windows/FoxyVPN.Windows/Assets/foxy_app_icon.svg'
+          $iconOutput = Join-Path $env:GITHUB_WORKSPACE 'windows/FoxyVPN.Windows/Assets/foxy_app_icon.ico'
+          if (-not (Test-Path $iconSource)) { throw 'Blue-white fox SVG source is missing.' }
+          magick $iconSource -background none -define icon:auto-resize=256,128,64,48,32,16 $iconOutput
+          if (-not (Test-Path $iconOutput)) { throw 'Failed to generate Windows ICO.' }
+
       - name: Restore solution
         run: dotnet restore windows/FoxyVPN.sln
 
