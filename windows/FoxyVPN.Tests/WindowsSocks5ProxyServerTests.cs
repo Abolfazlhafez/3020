@@ -145,7 +145,12 @@ public sealed class WindowsSocks5ProxyServerTests
         var relayPort = BinaryPrimitives.ReadUInt16BigEndian(reply.AsSpan(8, 2));
         Assert.InRange(relayPort, 1, 65535);
 
-        byte[] query = [0x12, 0x34, 0x01, 0x00, 0, 1, 0, 0, 0, 0, 0, 0];
+        // Valid DNS query for example.com A IN: header plus the full QNAME/QTYPE/QCLASS.
+        byte[] query = [
+            0x12, 0x34, 0x01, 0x00, 0, 1, 0, 0, 0, 0, 0, 0,
+            0x07, 0x65, 0x78, 0x61, 0x6D, 0x70, 0x6C, 0x65, 0x03, 0x63, 0x6F, 0x6D, 0x00,
+            0x00, 0x01, 0x00, 0x01
+        ];
         byte[] datagram = new byte[10 + query.Length];
         datagram[0] = 0; datagram[1] = 0; datagram[2] = 0; datagram[3] = 0x01;
         datagram[4] = 8; datagram[5] = 8; datagram[6] = 8; datagram[7] = 8;
@@ -310,7 +315,12 @@ public sealed class WindowsSocks5ProxyServerTests
             if (port != 53)
                 return ValueTask.FromException<IUpstreamDuplexStream>(new IOException("Unexpected destination port in DNS test."));
 
-            byte[] response = [0x12, 0x34, 0x81, 0x80, 0, 1, 0, 0, 0, 0, 0, 0];
+            // Matching response header and question section for example.com A IN.
+            byte[] response = [
+                0x12, 0x34, 0x81, 0x80, 0, 1, 0, 0, 0, 0, 0, 0,
+                0x07, 0x65, 0x78, 0x61, 0x6D, 0x70, 0x6C, 0x65, 0x03, 0x63, 0x6F, 0x6D, 0x00,
+                0x00, 0x01, 0x00, 0x01
+            ];
             byte[] framed = new byte[response.Length + 2];
             BinaryPrimitives.WriteUInt16BigEndian(framed, (ushort)response.Length);
             response.CopyTo(framed, 2);
