@@ -3,6 +3,9 @@ namespace FoxyVPN.Windows.Services;
 public sealed class AppServices : IDisposable, IAsyncDisposable
 {
     private int _disposeStarted;
+    // Serialize app-wide connect/disconnect operations so startup auto-connect and user clicks cannot
+    // create overlapping sessions or switch data planes while the other still owns resources.
+    private readonly SemaphoreSlim _sessionGate = new(1, 1);
     private WindowsProxyTunnelSession? _proxyOnlySession;
     public SettingsStore Settings { get; } = new();
     public AppLog Log { get; } = new();
@@ -57,55 +60,94 @@ public sealed class AppServices : IDisposable, IAsyncDisposable
 
     public async Task StartProxyOnlySessionAsync(CancellationToken cancellationToken = default)
     {
-        if (IsProxyOnlySessionActive) return;
-        if (_proxyOnlySession is not null)
+        await _sessionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            await _proxyOnlySession.DisposeAsync().ConfigureAwait(false);
-            _proxyOnlySession = null;
-        }
-        var settings = Settings.Current;
-        if (string.IsNullOrWhiteSpace(settings.SelectedServerHost) || settings.SelectedServerPort is < 1 or > 65535)
-            throw new InvalidOperationException("Choose and save a live VPN location before starting proxy-only mode.");
-        var server = new FoxyVPN.Windows.Models.ServerOption(
-            settings.SelectedLocationDisplay,
-            settings.SelectedCountryCode,
-            string.Empty,
-            settings.SelectedCityCode,
-            settings.SelectedServerHost,
-            settings.SelectedServerPort);
-        _proxyOnlySession = await WindowsProxyTunnelSession.StartAsync(
-            server,
-            settings,
-            ProxyPasses,
-            (level, message) =>
+            ThrowIfDisposing();
+            if (IsProxyOnlySessionActive) return;
+            if (Tunnel.State != WindowsTunnelState.Disconnected)
+                throw new InvalidOperationException("Disconnect or recover the system tunnel before starting proxy-only mode.");
+
+            if (_proxyOnlySession is not null)
             {
-                if (level.Equals("ERROR", StringComparison.OrdinalIgnoreCase)) Log.Error("VPNTransport", message);
-                else if (level.Equals("WARN", StringComparison.OrdinalIgnoreCase)) Log.Warn("VPNTransport", message);
-                else Log.Info("VPNTransport", message);
-            },
-            cancellationToken).ConfigureAwait(false);
-        Interlocked.Exchange(ref _connectionStartedAt, 0);
-        _ = ConnectionUptime;
+                var staleSession = Interlocked.Exchange(ref _proxyOnlySession, null);
+                if (staleSession is not null) await staleSession.DisposeAsync().ConfigureAwait(false);
+            }
+
+            var settings = Settings.Current;
+            if (string.IsNullOrWhiteSpace(settings.SelectedServerHost) || settings.SelectedServerPort is < 1 or > 65535)
+                throw new InvalidOperationException("Choose and save a live VPN location before starting proxy-only mode.");
+            var server = new FoxyVPN.Windows.Models.ServerOption(
+                settings.SelectedLocationDisplay,
+                settings.SelectedCountryCode,
+                string.Empty,
+                settings.SelectedCityCode,
+                settings.SelectedServerHost,
+                settings.SelectedServerPort);
+            _proxyOnlySession = await WindowsProxyTunnelSession.StartAsync(
+                server,
+                settings,
+                ProxyPasses,
+                (level, message) =>
+                {
+                    if (level.Equals("ERROR", StringComparison.OrdinalIgnoreCase)) Log.Error("VPNTransport", message);
+                    else if (level.Equals("WARN", StringComparison.OrdinalIgnoreCase)) Log.Warn("VPNTransport", message);
+                    else Log.Info("VPNTransport", message);
+                },
+                cancellationToken).ConfigureAwait(false);
+            Interlocked.Exchange(ref _connectionStartedAt, 0);
+            _ = ConnectionUptime;
+        }
+        finally { _sessionGate.Release(); }
     }
 
     public async Task StopProxyOnlySessionAsync()
     {
-        var session = Interlocked.Exchange(ref _proxyOnlySession, null);
-        if (session is not null) await session.DisposeAsync().ConfigureAwait(false);
-        Interlocked.Exchange(ref _connectionStartedAt, 0);
+        await _sessionGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var session = Interlocked.Exchange(ref _proxyOnlySession, null);
+            if (session is not null) await session.DisposeAsync().ConfigureAwait(false);
+            Interlocked.Exchange(ref _connectionStartedAt, 0);
+        }
+        finally { _sessionGate.Release(); }
     }
 
     public async Task StartSystemTunnelAsync(CancellationToken cancellationToken = default)
     {
-        await Tunnel.ConnectAsync(cancellationToken).ConfigureAwait(false);
-        Interlocked.Exchange(ref _connectionStartedAt, 0);
-        _ = ConnectionUptime;
+        await _sessionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ThrowIfDisposing();
+            if (IsProxyOnlySessionActive)
+                throw new InvalidOperationException("Stop the proxy-only session before starting the full-system VPN.");
+            if (_proxyOnlySession is not null)
+            {
+                var staleSession = Interlocked.Exchange(ref _proxyOnlySession, null);
+                if (staleSession is not null) await staleSession.DisposeAsync().ConfigureAwait(false);
+            }
+
+            await Tunnel.ConnectAsync(cancellationToken).ConfigureAwait(false);
+            Interlocked.Exchange(ref _connectionStartedAt, 0);
+            _ = ConnectionUptime;
+        }
+        finally { _sessionGate.Release(); }
     }
 
     public async Task StopSystemTunnelAsync(CancellationToken cancellationToken = default)
     {
-        await Tunnel.DisconnectAsync(cancellationToken).ConfigureAwait(false);
-        Interlocked.Exchange(ref _connectionStartedAt, 0);
+        await _sessionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await Tunnel.DisconnectAsync(cancellationToken).ConfigureAwait(false);
+            Interlocked.Exchange(ref _connectionStartedAt, 0);
+        }
+        finally { _sessionGate.Release(); }
+    }
+
+    private void ThrowIfDisposing()
+    {
+        if (Volatile.Read(ref _disposeStarted) != 0) throw new ObjectDisposedException(nameof(AppServices));
     }
 
     private void WriteTunnelLog(string level, string message)
