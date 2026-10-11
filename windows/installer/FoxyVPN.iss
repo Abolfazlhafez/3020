@@ -42,7 +42,7 @@ Filename: "{app}\FoxyVPN.exe"; Description: "Launch FoxyVPN"; Flags: nowait post
 
 [Code]
 function HasDotNet8DesktopRuntimeInRegistryView(
-  RootKey: Integer; const SubkeyName: String): Boolean;
+  const RootKey: HKEY; const SubkeyName: String): Boolean;
 var
   Names: TArrayOfString;
   I: Integer;
