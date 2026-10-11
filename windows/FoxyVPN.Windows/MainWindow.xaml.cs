@@ -25,7 +25,14 @@ public partial class MainWindow : Window
         InitializeComponent();
         // Show the shell before creating page controls. A failure in any page constructor
         // must not prevent the entire application window from appearing.
-        App.Services.Log.Changed += (_, _) => Dispatcher.Invoke(RefreshStatus);
+        App.Services.Log.Changed += (_, _) =>
+        {
+            // Never block a worker thread waiting for the UI dispatcher: shutdown waits synchronously
+            // for tunnel cleanup, and cleanup itself emits log events from background continuations.
+            if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished) return;
+            try { _ = Dispatcher.BeginInvoke(RefreshStatus, System.Windows.Threading.DispatcherPriority.Background); }
+            catch (InvalidOperationException) { /* The UI dispatcher is already shutting down. */ }
+        };
         Application.Current.SessionEnding += (_, _) => _sessionEnding = true;
         Loaded += (_, _) => Dispatcher.BeginInvoke(
             System.Windows.Threading.DispatcherPriority.ContextIdle,
