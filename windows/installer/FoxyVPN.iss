@@ -62,14 +62,15 @@ begin
 end;
 
 function IsDotNet8DesktopRuntimeInstalled(): Boolean;
-const
-  RuntimeKey = 'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App';
 begin
-  { Installer can run with different registry views depending on Windows and
-    how .NET was installed. Check both views before asking to download anything. }
-  Result := HasDotNet8DesktopRuntimeInRegistryView(HKEY_LOCAL_MACHINE_64, RuntimeKey);
+  { Check the 64-bit and 32-bit registry views before asking to download. }
+  Result := HasDotNet8DesktopRuntimeInRegistryView(
+    HKEY_LOCAL_MACHINE_64,
+    'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App');
   if not Result then
-    Result := HasDotNet8DesktopRuntimeInRegistryView(HKEY_LOCAL_MACHINE_32, RuntimeKey);
+    Result := HasDotNet8DesktopRuntimeInRegistryView(
+      HKEY_LOCAL_MACHINE_32,
+      'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App');
   if not Result then
     Result := HasDotNet8DesktopRuntimeInRegistryView(
       HKEY_LOCAL_MACHINE_64,
