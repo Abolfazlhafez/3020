@@ -193,8 +193,9 @@ jobs:
           New-Item -ItemType Directory -Force -Path $release | Out-Null
           $stage = Join-Path $env:RUNNER_TEMP 'FoxyVPN-release'
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          # Ship one installer only. The bootstrapper embeds a second self-contained .NET runtime
+          # and duplicates much of the setup payload, so including both needlessly inflates downloads.
           Copy-Item 'artifacts/installer/FoxyVPN-Setup-2.6.0-x64.exe' (Join-Path $stage 'FoxyVPN-Setup.exe')
-          Copy-Item 'artifacts/bootstrapper/FoxyVPN-Installer.exe' (Join-Path $stage 'FoxyVPN-Installer.exe')
           Copy-Item 'windows/README_WINDOWS.md' (Join-Path $stage 'README.txt')
           Compress-Archive -Path (Join-Path $stage '*') -DestinationPath (Join-Path $release 'FoxyVPN-Windows-x64.zip') -CompressionLevel Optimal -Force
 
@@ -202,7 +203,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: FoxyVPN-Windows-x64-Release
-          path: |
-            artifacts/release/FoxyVPN-Windows-x64.zip
-            artifacts/bootstrapper/FoxyVPN-Installer.exe
+          path: artifacts/release/FoxyVPN-Windows-x64.zip
           if-no-files-found: error
