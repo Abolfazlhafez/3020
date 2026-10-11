@@ -271,8 +271,7 @@ public partial class HomeView : UserControl, IRefreshableView
                 return;
             }
 
-            if (!App.Services.Settings.Current.ProxyOnlyMode &&
-                (App.Services.Tunnel.IsConnected || App.Services.Tunnel.State == WindowsTunnelState.Faulted))
+            if (App.Services.Tunnel.IsConnected || App.Services.Tunnel.State == WindowsTunnelState.Faulted)
             {
                 // Cleanup after a failed session must never be blocked by a confirmation prompt.
                 if (App.Services.Tunnel.IsConnected && !ConfirmDisconnectIfRequested()) return;
