@@ -9,12 +9,12 @@ namespace FoxyVPN.Windows;
 
 public partial class MainWindow : Window
 {
-    private readonly HomeView _home;
-    private readonly LoginView _login;
-    private readonly ServersView _servers;
-    private readonly AccountView _account;
-    private readonly SettingsView _settings;
-    private readonly LogsView _logs;
+    private HomeView? _home;
+    private LoginView? _login;
+    private ServersView? _servers;
+    private AccountView? _account;
+    private SettingsView? _settings;
+    private LogsView? _logs;
     private Button? _activeNav;
     private string _currentPage = "";
     private bool _statusDotPulsing;
@@ -23,17 +23,13 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        _home = new HomeView();
-        _login = new LoginView();
-        _servers = new ServersView();
-        _account = new AccountView();
-        _settings = new SettingsView();
-        _logs = new LogsView();
-        _home.RequestNavigation += target => Navigate(target);
-        _login.AuthenticationChanged += (_, _) => RefreshStatus();
+        // Show the shell before creating page controls. A failure in any page constructor
+        // must not prevent the entire application window from appearing.
         App.Services.Log.Changed += (_, _) => Dispatcher.Invoke(RefreshStatus);
         Application.Current.SessionEnding += (_, _) => _sessionEnding = true;
-        Navigate("Home", animate: false);
+        Loaded += (_, _) => Dispatcher.BeginInvoke(
+            System.Windows.Threading.DispatcherPriority.ContextIdle,
+            new Action(() => Navigate("Home", animate: false)));
     }
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
@@ -57,13 +53,13 @@ public partial class MainWindow : Window
         }
         PageHost.Content = page switch
         {
-            "Home" => _home,
-            "Locations" => _servers,
-            "Firefox account" => _login,
-            "Account usage" => _account,
-            "Settings" => _settings,
-            "Logs" => _logs,
-            _ => _home
+            "Home" => GetHomeView(),
+            "Locations" => _servers ??= new ServersView(),
+            "Firefox account" => GetLoginView(),
+            "Account usage" => _account ??= new AccountView(),
+            "Settings" => _settings ??= new SettingsView(),
+            "Logs" => _logs ??= new LogsView(),
+            _ => GetHomeView()
         };
         _currentPage = page;
         HeaderTitle.Text = page switch { "Home" => "Overview", "Logs" => "Diagnostics", _ => page };
@@ -156,6 +152,26 @@ public partial class MainWindow : Window
             _statusDotPulsing = tunnelActive;
             Motion.Breathe(HeaderStatusDot, tunnelActive);
         }
+    }
+
+    private HomeView GetHomeView()
+    {
+        if (_home is null)
+        {
+            _home = new HomeView();
+            _home.RequestNavigation += target => Navigate(target);
+        }
+        return _home;
+    }
+
+    private LoginView GetLoginView()
+    {
+        if (_login is null)
+        {
+            _login = new LoginView();
+            _login.AuthenticationChanged += (_, _) => RefreshStatus();
+        }
+        return _login;
     }
 
     private void HomeNav_Click(object sender, RoutedEventArgs e) => Navigate("Home");
