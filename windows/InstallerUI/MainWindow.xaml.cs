@@ -81,9 +81,9 @@ public partial class MainWindow : Window
 
             _progressTimer.Stop();
             IndeterminateTrack.Visibility = Visibility.Collapsed;
-            _installFinished = true;
+            _installFinished = process.ExitCode == 0;
             CloseButton.IsEnabled = true;
-            ExitButton.Content = "Finish";
+            ExitButton.Content = _installFinished ? "Finish" : "Close";
 
             if (process.ExitCode == 0)
             {
