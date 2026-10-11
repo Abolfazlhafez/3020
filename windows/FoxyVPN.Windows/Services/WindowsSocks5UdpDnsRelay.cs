@@ -25,11 +25,24 @@ internal sealed class WindowsSocks5UdpDnsRelay : IAsyncDisposable
     private static readonly TimeSpan QueryTimeout = TimeSpan.FromSeconds(10);
     private const int MaxHttpHeaderBytes = 16 * 1024;
 
-    private static readonly string[][] ResolverPools =
+    // Connect to the resolver's IP through the authenticated edge, but validate TLS and send
+    // HTTP Host using the provider's certificate hostname (an IP literal is not its HTTPS identity).
+    private sealed record DohResolver(string Address, string Hostname);
+
+    private static readonly DohResolver[][] ResolverPools =
     [
-        ["1.1.1.1", "1.0.0.1", "2606:4700:4700::1111", "2606:4700:4700::1001"],
-        ["8.8.8.8", "8.8.4.4", "2001:4860:4860::8888", "2001:4860:4860::8844"],
-        ["9.9.9.9", "149.112.112.112", "2620:fe::fe", "2620:fe::9"],
+        [
+            new("1.1.1.1", "cloudflare-dns.com"), new("1.0.0.1", "cloudflare-dns.com"),
+            new("2606:4700:4700::1111", "cloudflare-dns.com"), new("2606:4700:4700::1001", "cloudflare-dns.com")
+        ],
+        [
+            new("8.8.8.8", "dns.google"), new("8.8.4.4", "dns.google"),
+            new("2001:4860:4860::8888", "dns.google"), new("2001:4860:4860::8844", "dns.google")
+        ],
+        [
+            new("9.9.9.9", "dns.quad9.net"), new("149.112.112.112", "dns.quad9.net"),
+            new("2620:fe::fe", "dns.quad9.net"), new("2620:fe::9", "dns.quad9.net")
+        ],
     ];
 
     private readonly IUpstreamStreamProvider _upstream;
@@ -187,17 +200,17 @@ internal sealed class WindowsSocks5UdpDnsRelay : IAsyncDisposable
                 // Keep a bounded budget for DoH so a failed provider can still fall back to DNS-over-TCP.
                 using var dohTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 dohTimeout.CancelAfter(TimeSpan.FromSeconds(3));
-                var answer = await QueryDohAsync(candidate, query, dohTimeout.Token).ConfigureAwait(false);
+                var answer = await QueryDohAsync(candidate.Address, candidate.Hostname, query, dohTimeout.Token).ConfigureAwait(false);
                 if (answer is { Length: >= 12 and <= MaxDnsMessageBytes } &&
                     DnsMessageRules.IsResponseToQuery(query, answer))
                     return answer;
                 if (answer is not null)
-                    _log("DEBUG", $"DNS-over-HTTPS via {candidate} returned a response that did not match the query; falling back to DNS-over-TCP.");
+                    _log("DEBUG", $"DNS-over-HTTPS via {candidate.Hostname} returned a response that did not match the query; falling back to DNS-over-TCP.");
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
-                _log("DEBUG", $"DNS-over-HTTPS via {candidate} failed ({ex.GetType().Name}); falling back to DNS-over-TCP through the authenticated upstream.");
+                _log("DEBUG", $"DNS-over-HTTPS via {candidate.Hostname} failed ({ex.GetType().Name}); falling back to DNS-over-TCP through the authenticated upstream.");
             }
         }
 
@@ -212,7 +225,7 @@ internal sealed class WindowsSocks5UdpDnsRelay : IAsyncDisposable
         return tcpAnswer;
     }
 
-    private async Task<byte[]?> QueryDohAsync(string resolverAddress, byte[] query, CancellationToken cancellationToken)
+    private async Task<byte[]?> QueryDohAsync(string resolverAddress, string resolverHostname, byte[] query, CancellationToken cancellationToken)
     {
         await using var tunnel = await _upstream.OpenConnectAsync(resolverAddress, 443, cancellationToken).ConfigureAwait(false);
         using var bridge = new SplitDuplexStream(tunnel.Input, tunnel.Output);
@@ -221,16 +234,14 @@ internal sealed class WindowsSocks5UdpDnsRelay : IAsyncDisposable
         tlsTimeout.CancelAfter(TimeSpan.FromSeconds(5));
         await tls.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
         {
-            TargetHost = resolverAddress,
+            TargetHost = resolverHostname,
             EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
             CertificateRevocationCheckMode = X509RevocationMode.Online,
             ApplicationProtocols = [SslApplicationProtocol.Http11],
         }, tlsTimeout.Token).ConfigureAwait(false);
 
-        var hostHeader = IPAddress.TryParse(resolverAddress, out var ip) && ip.AddressFamily == AddressFamily.InterNetworkV6
-            ? $"[{ip}]" : resolverAddress;
         var headers = Encoding.ASCII.GetBytes(
-            $"POST /dns-query HTTP/1.1\r\nHost: {hostHeader}\r\nAccept: application/dns-message\r\n" +
+            $"POST /dns-query HTTP/1.1\r\nHost: {resolverHostname}\r\nAccept: application/dns-message\r\n" +
             $"Content-Type: application/dns-message\r\nContent-Length: {query.Length}\r\nConnection: close\r\n\r\n");
         await tls.WriteAsync(headers, cancellationToken).ConfigureAwait(false);
         await tls.WriteAsync(query, cancellationToken).ConfigureAwait(false);
@@ -258,16 +269,16 @@ internal sealed class WindowsSocks5UdpDnsRelay : IAsyncDisposable
         return response;
     }
 
-    private static IReadOnlyList<string> GetDohCandidates(string resolverHost)
+    private static IReadOnlyList<DohResolver> GetDohCandidates(string resolverHost)
     {
-        if (!IPAddress.TryParse(resolverHost, out var parsed)) return Array.Empty<string>();
+        if (!IPAddress.TryParse(resolverHost, out var parsed)) return Array.Empty<DohResolver>();
         var normalized = NormalizeAddress(parsed).ToString();
         foreach (var pool in ResolverPools)
         {
-            if (pool.Any(candidate => IPAddress.TryParse(candidate, out var address) && NormalizeAddress(address).ToString() == normalized))
+            if (pool.Any(candidate => IPAddress.TryParse(candidate.Address, out var address) && NormalizeAddress(address).ToString() == normalized))
                 return pool.ToArray();
         }
-        return Array.Empty<string>();
+        return Array.Empty<DohResolver>();
     }
 
     private static async Task<byte[]?> ReadDohResponseAsync(Stream stream, CancellationToken cancellationToken)
