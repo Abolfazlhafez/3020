@@ -28,16 +28,24 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        WriteStartupMarker("OnStartup entered; before WPF base startup.");
         base.OnStartup(e);
+        WriteStartupMarker("WPF base startup completed.");
         DispatcherUnhandledException += OnDispatcherUnhandledException;
 
         try
         {
+            WriteStartupMarker("Creating AppServices.");
             Services = new AppServices();
+            WriteStartupMarker("AppServices created.");
             Services.Log.Info("Application", "FoxyVPN Windows started.");
+            WriteStartupMarker("Constructing MainWindow / loading MainWindow.xaml.");
             var window = new MainWindow();
+            WriteStartupMarker("MainWindow constructed.");
             MainWindow = window;
+            WriteStartupMarker("Applying theme.");
             ThemeManager.Apply(Services.Settings.Current.ThemeMode);
+            WriteStartupMarker("Theme applied.");
 
             var startMinimized = e.Args.Any(arg =>
                 string.Equals(arg, "--minimized", StringComparison.OrdinalIgnoreCase));
@@ -52,7 +60,9 @@ public partial class App : Application
                 window.ShowInTaskbar = true;
             }
 
+            WriteStartupMarker("Showing main window.");
             window.Show();
+            WriteStartupMarker("Main window shown.");
             if (!startMinimized)
             {
                 window.Activate();
@@ -89,6 +99,22 @@ public partial class App : Application
             MessageBoxImage.Error);
         // Leave the exception unhandled so WPF can shut down safely rather than continuing
         // with potentially inconsistent UI or network state.
+    }
+
+    private static void WriteStartupMarker(string message)
+    {
+        try
+        {
+            var path = StartupDiagnosticsPath;
+            var directory = Path.GetDirectoryName(path);
+            if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
+            var entry = $"[{DateTimeOffset.Now:O}] STARTUP: {message}{Environment.NewLine}";
+            lock (StartupDiagnosticsLock) File.AppendAllText(path, entry, Encoding.UTF8);
+        }
+        catch
+        {
+            // A diagnostic marker must never interrupt startup.
+        }
     }
 
     private static void WriteStartupDiagnostic(string heading, Exception exception)
