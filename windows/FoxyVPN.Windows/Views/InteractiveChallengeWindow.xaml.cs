@@ -116,11 +116,14 @@ public partial class InteractiveChallengeWindow : Window
             foreach (var cookie in cookies.Take(129))
             {
                 DateTimeOffset? expires = null;
-                if (!cookie.IsSession && double.IsFinite(cookie.Expires) && cookie.Expires > 0)
+                if (!cookie.IsSession && cookie.Expires > DateTime.MinValue)
                 {
-                    try { expires = DateTimeOffset.FromUnixTimeMilliseconds(checked((long)(cookie.Expires * 1000d))); }
+                    try
+                    {
+                        var utcExpiry = DateTime.SpecifyKind(cookie.Expires, DateTimeKind.Utc);
+                        expires = new DateTimeOffset(utcExpiry);
+                    }
                     catch (ArgumentOutOfRangeException) { continue; }
-                    catch (OverflowException) { continue; }
                 }
                 collected.Add(new InteractiveChallengeCookie(cookie.Name, cookie.Value, cookie.Domain,
                     string.IsNullOrWhiteSpace(cookie.Path) ? "/" : cookie.Path,
