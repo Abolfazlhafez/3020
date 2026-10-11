@@ -38,3 +38,84 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 
 [Run]
 Filename: "{app}\FoxyVPN.exe"; Description: "Launch FoxyVPN"; Flags: nowait postinstall skipifsilent
+
+
+[Code]
+function IsDotNet8DesktopRuntimeInstalled(): Boolean;
+var
+  Names: TArrayOfString;
+  I: Integer;
+begin
+  Result := False;
+  if RegGetValueNames(HKEY_LOCAL_MACHINE_64,
+    'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App',
+    Names) then
+  begin
+    for I := 0 to GetArrayLength(Names) - 1 do
+    begin
+      if Copy(Names[I], 1, 2) = '8.' then
+      begin
+        Result := True;
+        Exit;
+      end;
+    end;
+  end;
+end;
+
+function InitializeSetup(): Boolean;
+var
+  ResultCode: Integer;
+  RuntimePath: String;
+begin
+  Result := True;
+  if IsDotNet8DesktopRuntimeInstalled() then
+    Exit;
+
+  if MsgBox(
+    'FoxyVPN uses the Microsoft .NET 8 Desktop Runtime. To keep the FoxyVPN download small, this runtime is downloaded from Microsoft only when it is not already installed. Continue with the runtime download and installation?',
+    mbConfirmation, MB_YESNO) <> IDYES then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  try
+    DownloadTemporaryFile(
+      'https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-x64.exe',
+      'dotnet-windowsdesktop-runtime.exe', '', nil);
+  except
+    MsgBox(
+      'The Microsoft .NET Desktop Runtime could not be downloaded. Check your internet connection, then install the x64 .NET 8 Desktop Runtime from https://dotnet.microsoft.com/download/dotnet/8.0 and run this installer again.',
+      mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
+
+  RuntimePath := ExpandConstant('{tmp}\dotnet-windowsdesktop-runtime.exe');
+  if not Exec(RuntimePath, '/install /quiet /norestart', '',
+      SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  begin
+    MsgBox(
+      'The .NET Desktop Runtime installer could not be started. Install the x64 .NET 8 Desktop Runtime from https://dotnet.microsoft.com/download/dotnet/8.0 and run this installer again.',
+      mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
+
+  if (ResultCode <> 0) and (ResultCode <> 3010) and (ResultCode <> 1641) then
+  begin
+    MsgBox(
+      'Microsoft .NET Desktop Runtime setup did not complete successfully. Install the x64 .NET 8 Desktop Runtime from https://dotnet.microsoft.com/download/dotnet/8.0 and run this installer again.',
+      mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
+
+  if not IsDotNet8DesktopRuntimeInstalled() then
+  begin
+    MsgBox(
+      'The .NET 8 Desktop Runtime was not detected after setup. Install the x64 .NET 8 Desktop Runtime from https://dotnet.microsoft.com/download/dotnet/8.0 and run this installer again.',
+      mbError, MB_OK);
+    Result := False;
+  end;
+end;
