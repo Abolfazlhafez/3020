@@ -164,7 +164,7 @@ jobs:
         run: dotnet test windows/FoxyVPN.sln --configuration Release --no-build --logger "trx;LogFileName=foxyvpn-tests.trx"
 
       - name: Publish self-contained portable build
-        run: dotnet publish windows/FoxyVPN.Windows/FoxyVPN.Windows.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true --output artifacts/portable
+        run: dotnet publish windows/FoxyVPN.Windows/FoxyVPN.Windows.csproj --configuration Release --runtime win-x64 --self-contained false -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true --output artifacts/portable
 
       - name: Bundle native tunnel runtime into portable build
         shell: pwsh
@@ -182,9 +182,6 @@ jobs:
         shell: cmd
         working-directory: windows\installer
         run: '"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=2.6.0 /DSourceDir="..\..\artifacts\portable" /DOutputDir="..\..\artifacts\installer" FoxyVPN.iss'
-
-      - name: Publish glass installer bootstrapper
-        run: dotnet publish windows/InstallerUI/FoxyVPN.InstallerUI.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --output artifacts/bootstrapper
 
       - name: Create clean Windows release ZIP
         shell: pwsh
