@@ -41,25 +41,39 @@ Filename: "{app}\FoxyVPN.exe"; Description: "Launch FoxyVPN"; Flags: nowait post
 
 
 [Code]
-function IsDotNet8DesktopRuntimeInstalled(): Boolean;
+function HasDotNet8DesktopRuntimeInRegistryView(
+  RootKey: Integer; const SubkeyName: String): Boolean;
 var
   Names: TArrayOfString;
   I: Integer;
 begin
   Result := False;
-  if RegGetValueNames(HKEY_LOCAL_MACHINE_64,
-    'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App',
-    Names) then
+  if not RegGetValueNames(RootKey, SubkeyName, Names) then
+    Exit;
+
+  for I := 0 to GetArrayLength(Names) - 1 do
   begin
-    for I := 0 to GetArrayLength(Names) - 1 do
+    if Copy(Names[I], 1, 2) = '8.' then
     begin
-      if Copy(Names[I], 1, 2) = '8.' then
-      begin
-        Result := True;
-        Exit;
-      end;
+      Result := True;
+      Exit;
     end;
   end;
+end;
+
+function IsDotNet8DesktopRuntimeInstalled(): Boolean;
+const
+  RuntimeKey = 'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App';
+begin
+  { Installer can run with different registry views depending on Windows and
+    how .NET was installed. Check both views before asking to download anything. }
+  Result := HasDotNet8DesktopRuntimeInRegistryView(HKEY_LOCAL_MACHINE_64, RuntimeKey);
+  if not Result then
+    Result := HasDotNet8DesktopRuntimeInRegistryView(HKEY_LOCAL_MACHINE_32, RuntimeKey);
+  if not Result then
+    Result := HasDotNet8DesktopRuntimeInRegistryView(
+      HKEY_LOCAL_MACHINE_64,
+      'SOFTWARE\WOW6432Node\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App');
 end;
 
 function InitializeSetup(): Boolean;
@@ -72,10 +86,12 @@ begin
     Exit;
 
   if MsgBox(
-    'FoxyVPN uses the Microsoft .NET 8 Desktop Runtime. To keep the FoxyVPN download small, this runtime is downloaded from Microsoft only when it is not already installed. Continue with the runtime download and installation?',
+    'FoxyVPN normally uses the Microsoft .NET 8 Desktop Runtime. It was not detected in the standard registry locations. Yes = download and install it from Microsoft. No = continue installing FoxyVPN without downloading anything; if a compatible runtime is already installed elsewhere, it may still work. If it is truly missing, FoxyVPN will not start until you install it.',
     mbConfirmation, MB_YESNO) <> IDYES then
   begin
-    Result := False;
+    { Do not force an extra download. Continue in case the runtime is installed
+      in a custom or per-user location that cannot be detected here. }
+    Result := True;
     Exit;
   end;
 
