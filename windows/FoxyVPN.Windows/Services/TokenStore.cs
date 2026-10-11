@@ -23,17 +23,24 @@ internal sealed class TokenStore
     {
         lock (_sync)
         {
+            byte[]? cipher = null;
+            byte[]? plain = null;
             try
             {
                 if (!File.Exists(_path)) return null;
-                var cipher = File.ReadAllBytes(_path);
-                var plain = ProtectedData.Unprotect(cipher, Entropy, DataProtectionScope.CurrentUser);
+                cipher = File.ReadAllBytes(_path);
+                plain = ProtectedData.Unprotect(cipher, Entropy, DataProtectionScope.CurrentUser);
                 return JsonSerializer.Deserialize<RuntimeAuth>(plain);
             }
             catch (CryptographicException) { return null; }
             catch (IOException) { return null; }
             catch (JsonException) { return null; }
             catch (UnauthorizedAccessException) { return null; }
+            finally
+            {
+                if (cipher is not null) CryptographicOperations.ZeroMemory(cipher);
+                if (plain is not null) CryptographicOperations.ZeroMemory(plain);
+            }
         }
     }
 
@@ -42,12 +49,21 @@ internal sealed class TokenStore
         lock (_sync)
         {
             var plain = JsonSerializer.SerializeToUtf8Bytes(auth);
-            var cipher = ProtectedData.Protect(plain, Entropy, DataProtectionScope.CurrentUser);
+            byte[]? cipher = null;
             var temp = _path + ".tmp";
-            File.WriteAllBytes(temp, cipher);
-            if (File.Exists(_path)) File.Replace(temp, _path, null);
-            else File.Move(temp, _path);
-            CryptographicOperations.ZeroMemory(plain);
+            try
+            {
+                cipher = ProtectedData.Protect(plain, Entropy, DataProtectionScope.CurrentUser);
+                File.WriteAllBytes(temp, cipher);
+                if (File.Exists(_path)) File.Replace(temp, _path, null);
+                else File.Move(temp, _path);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(plain);
+                if (cipher is not null) CryptographicOperations.ZeroMemory(cipher);
+                try { if (File.Exists(temp)) File.Delete(temp); } catch { }
+            }
         }
     }
 
@@ -56,6 +72,7 @@ internal sealed class TokenStore
         lock (_sync)
         {
             try { if (File.Exists(_path)) File.Delete(_path); } catch { }
+            try { if (File.Exists(_path + ".tmp")) File.Delete(_path + ".tmp"); } catch { }
         }
     }
 }
