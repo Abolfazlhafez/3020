@@ -1,0 +1,17 @@
+FoxyVPN Phase 2.4 package manifest
+Windows application version: 2.4.0
+Package: Android + Windows source, with separate Windows-only source ZIP
+
+Phase 2.4 source changes:
+- WindowsHttp2ConnectSession now tolerates informational HTTP/2 response headers (100-199 except 101) and waits for the final CONNECT status.
+- An informational response carrying END_STREAM is rejected.
+- Added pure unit-test source for informational status classification; tests intentionally not executed.
+- Aligned version metadata in WPF project, Inno Setup default and GitHub Actions installer invocation at 2.4.0 (CI was stale at 2.2.0).
+- Added the current phase reports, prompt and manifest to the CI artifact allowlist.
+- Android project files are preserved from the Phase 2.3 baseline.
+
+Important verification boundary:
+Static project/config syntax and archive integrity checks are packaging checks only. dotnet restore/build/test, native HEV/Wintun build/ABI, live VPN, route/NRPT/firewall rollback, DNS/IPv4/IPv6 leak verification, portable publish and installer acceptance were NOT run. Do not treat these ZIPs as a verified production VPN binary.
+
+Known limitations:
+General UDP/QUIC and per-application split tunneling are not implemented. A Windows 10/11 end-to-end acceptance pass is required after remaining coding work is complete.

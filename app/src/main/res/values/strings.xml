@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">FoxyVPN</string>
+    <string name="qs_tile_label">FoxyVPN</string>
+    <string name="qs_tile_description">Turn FoxyVPN on or off</string>
+    <string name="qs_status_off">Off</string>
+    <string name="qs_status_connecting">Connecting…</string>
+    <string name="qs_status_on">On</string>
+    <string name="qs_status_on_location">On · %1$s</string>
+    <string name="qs_status_failed">Failed · tap to retry</string>
+    <string name="qs_status_sign_in">Sign in to connect</string>
+</resources>

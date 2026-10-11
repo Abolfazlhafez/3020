@@ -1,0 +1,1 @@
+Continue with CONTINUATION_PROMPT_PHASE_2_5.md (FoxyVPN Phase 2.5 to 2.6). Preserve Android sources, finish the remaining coding audit before comprehensive tests, and do not claim compilation or live VPN verification without logs.

@@ -1,0 +1,17 @@
+FoxyVPN Android + Windows full package manifest — Phase 2.5
+Windows application version: 2.5.0
+Baseline: Phase 2.4 full archive
+
+This archive contains the Android/Kotlin/Gradle project and the native WPF/.NET Windows source project, Windows xUnit test source, CI workflow, migration notes, installer script, third-party notices, and phase reports/continuation prompts.
+
+Phase 2.5 changes:
+- WindowsSocks5UdpDnsRelay now verifies upstream DNS responses against the original query.
+- Added bounded DnsMessageRules parsing/correlation for transaction ID, QR/opcode, question count, QNAME, QTYPE and QCLASS.
+- Added DnsMessageRulesTests source for valid and invalid/malformed cases (not executed).
+- Bumped active Windows app/installer/CI metadata to 2.5.0.
+- Preserved Android project files from the Phase 2.4 baseline without intentional changes.
+
+Validation limits:
+- Static XML/YAML/archive checks are packaging checks only.
+- No dotnet restore/build/test, native HEV/Wintun build, live tunnel, leak/rollback acceptance, portable publish, or installer generation is claimed.
+- General UDP/QUIC and per-app split tunneling remain unsupported; no direct-network fallback was added for DNS.

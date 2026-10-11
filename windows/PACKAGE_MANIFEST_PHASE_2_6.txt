@@ -1,0 +1,6 @@
+FoxyVPN Phase 2.6 package manifest
+Windows application version: 2.6.0
+Contents: Android source project, Windows WPF/C# source, xUnit test source, CI workflow, installer script, migration notes, third-party notices, Phase 2.6 reports and continuation prompt.
+Key change: strict DoH HTTP response-header validation (status, single Content-Length, single DNS MIME type, rejection of ambiguous framing and malformed headers).
+Validation: static syntax/packaging checks only. No build/test/live VPN validation is claimed.
+Known limitations: general UDP/QUIC and per-app split tunneling remain unsupported; HEV/Wintun runtime, live route/DNS handling, and installer still require final Windows validation.

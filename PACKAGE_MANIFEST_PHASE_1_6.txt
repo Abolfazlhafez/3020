@@ -1,0 +1,18 @@
+FoxyVPN Windows conversion — Phase 1.6 deliverable manifest
+
+Included:
+- Original Android/Kotlin/Gradle source preserved.
+- Native Windows WPF/.NET 8 solution and automated test source.
+- Motion-led 2027 desktop UI, auto-start setting and previous phase features.
+- HTTP/2 CONNECT transport source and Guardian proxy pass integration.
+- SOCKS5 TCP CONNECT plus DNS-only UDP ASSOCIATE relay source (DoH then DNS-over-TCP, through injected authenticated upstream).
+- HEV tun2socks 2.17.1 C-API lifecycle bridge and Android-aligned config writer.
+- Windows CI workflow to build native HEV, verify official Wintun package, build/test/publish x64 and create Inno Setup installer.
+- Migration report, native dependency notices, phase report and continuation prompt.
+
+Verification limitations:
+- .NET SDK/MSBuild unavailable in authoring environment; restore/build/xUnit not run.
+- Windows CI workflow has not run; HEV/Wintun native artifact is not included as a verified binary in the source ZIP.
+- No live endpoint interoperability, native HEV startup, system-wide routing, DNS leak test or external IP verification was executed.
+- Full system VPN remains unregistered and fail-closed. Non-DNS UDP/QUIC is deliberately dropped by the current TCP CONNECT transport.
+- No EXE/MSIX/installer binary was built in this environment.

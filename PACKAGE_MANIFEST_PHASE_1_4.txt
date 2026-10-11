@@ -1,0 +1,8 @@
+FoxyVPN native Windows project package manifest — Phase 1.4
+Date: 2026-10-10
+Windows source version: 1.4.0
+Target: .NET 8 / WPF / Windows 10-11
+
+Included: original Android/Kotlin source; native WPF desktop project; account/server API client source; animated 2027-inspired UI and Reduce Motion; Windows auto-start; favorites; catalog refresh; diagnostics ZIP; fail-closed tunnel lifecycle and readiness preflight; SOCKS5 CONNECT listener foundation; SOCKS5 protocol/integration-test source; Windows build/installer workflow; migration and continuation documents.
+
+Important status: source-only package, not a verified Windows build. .NET SDK, MSBuild, csc and mcs are unavailable in the authoring environment. The added tests were authored but not executed. No EXE/MSIX/installer is included or claimed. The SOCKS5 listener is not wired into the app because there is no real HTTP/2 CONNECT stream provider. Windows TUN packet I/O, UDP/DNS relay, system routes and route/DNS rollback, full traffic/leak testing, and end-to-end tunnel runtime remain unimplemented.

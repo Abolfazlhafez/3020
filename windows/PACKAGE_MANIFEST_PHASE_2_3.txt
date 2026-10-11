@@ -1,0 +1,14 @@
+FoxyVPN Windows Source — Phase 2.3.0
+
+Included:
+- WPF Windows application source
+- xUnit test source (not executed)
+- Visual Studio solution and project files
+- Installer script and CI workflows
+- Migration report, third-party notices, and continuation instructions
+- HTTP/2 status validation change and report
+
+Verification status:
+- Archive integrity and static project/config checks only
+- dotnet build/test NOT run
+- Live VPN, HEV/Wintun, route rollback, leak checks, portable publish, installer acceptance NOT run

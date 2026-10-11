@@ -1,0 +1,33 @@
+FoxyVPN Phase 2.0 package manifest
+==================================
+App version: 2.0.0
+Base: Phase 1.9 source tree, preserved (Android source remains unchanged by this increment)
+
+Key files added/changed:
+- windows/FoxyVPN.Windows/Properties/AssemblyInfo.cs
+- windows/FoxyVPN.Windows/Services/WindowsHttp2ConnectSession.cs
+- windows/FoxyVPN.Windows/Services/TunnelReadinessService.cs
+- windows/FoxyVPN.Tests/UpstreamProxyHandshakeTests.cs
+- windows/FoxyVPN.Tests/TunnelReadinessServiceTests.cs
+- windows/FoxyVPN.Windows/FoxyVPN.Windows.csproj
+- windows/installer/FoxyVPN.iss
+- .github/workflows/windows-build.yml
+- README.md
+- WINDOWS_SOURCE_README.md
+- windows/README_WINDOWS.md
+- windows/MIGRATION_REPORT.md
+- PHASE_2_0_PROXY_CHAIN_HARDENING_REPORT.md
+- CONTINUATION_PROMPT_PHASE_2_0.md
+
+Includes:
+- Original Android/Kotlin/Gradle project.
+- Native C#/.NET 8/WPF desktop source and Visual Studio solution.
+- xUnit test source; tests are written but not executed during this coding increment.
+- Windows CI recipe for managed/native build, portable publish and Inno Setup installer.
+- Historical phase reports and continuation prompts.
+
+Validation:
+- Static/source/package checks only.
+- No dotnet restore/build/test executed.
+- No native HEV build, live tunnel, leak test, Windows launch or installer binary generated.
+- General UDP/QUIC and per-app split tunneling remain unsupported/unimplemented.

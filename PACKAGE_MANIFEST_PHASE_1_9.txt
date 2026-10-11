@@ -1,0 +1,24 @@
+FoxyVPN — Phase 1.9 source bundle manifest
+
+Primary archives
+- FoxyVPN-Android-and-Windows-Phase1.9.zip: original Android/Kotlin project preserved plus native Windows WPF/.NET 8 source, scripts, reports and tests.
+- FoxyVPN-Windows-Source-Phase1.9.zip: Windows Solution/source/tests/native build workflow/documentation.
+
+Current Windows app metadata
+- Version: 1.9.0
+- UI: WPF (.NET 8 Windows)
+- Interactive verification UI: Microsoft.Web.WebView2 1.0.4258.31; Microsoft Edge WebView2 Evergreen Runtime needed when manually completing service challenge.
+- Native tunnel components sourced/pinned by CI: HEV tun2socks 2.17.1 and Wintun 0.14.1 x64. Their build/run is not verified in this authoring environment.
+
+Phase 1.9 changes
+- User-mediated WebView2 challenge window and domain/expiry/secure cookie import validation.
+- Retry-once challenge handling on login, email verification, token refresh, account view and connection start/connect-on-launch paths.
+- Connect-on-launch waits for prior network-route recovery to finish.
+- Split tunneling limitation disclosed; no false toggle.
+- Additional malformed-cookie test source.
+
+Verification limitation
+- No .NET build, automated tests, native HEV/Wintun build, live VPN connection, leak tests, installer build or on-device Windows test has been executed in this authoring environment. Tests are deliberately deferred until coding is complete, per user request.
+
+Not yet accepted as complete
+- Full TCP/DNS forwarding with live service, IPv4/IPv6/DNS no-leak test, general UDP/QUIC support, per-application split tunnel, Windows 10/11 runtime testing, and install/uninstall verification.

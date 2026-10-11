@@ -1,0 +1,8 @@
+FoxyVPN native Windows project package manifest — Phase 1.3
+Date: 2026-10-10
+Windows app version: 1.3.0
+Target: .NET 8 / WPF / Windows 10-11
+
+Included: original Android/Kotlin source; native WPF desktop project; sign-in, server list, account and settings source; motion system; auto-start; diagnostics export; tunnel readiness service; serialized tunnel lifecycle contract; unit-test source; Windows build/installer workflow; migration and continuation documents.
+
+Important: this package contains source, not a verified Windows build. No EXE/MSIX/installer is included. The .NET SDK/MSBuild was unavailable to the authoring environment, so restore/build/test are not claimed as successful. The Windows VPN packet data plane is incomplete: HTTP/2 CONNECT multiplexing, SOCKS5 TCP/UDP/DNS integration, Windows TUN adapter packet I/O, route/DNS transaction and rollback, and end-to-end leak tests remain outstanding.

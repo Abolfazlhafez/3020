@@ -1,0 +1,26 @@
+FoxyVPN native Windows port — Phase 1.2
+Product version: 1.1.0
+
+Contents
+- Original Android Kotlin/Jetpack Compose project (preserved)
+- Native Windows WPF solution under windows/FoxyVPN.sln
+- Motion-led 2027-inspired dashboard and view transitions
+- Ambient orbit/pulse animation with reduced-motion preference
+- Phase 1.1 convenience features (auto-start, favorites, TCP reachability, auto-refresh, diagnostic ZIP)
+- Unit test source, Windows CI workflow, Inno Setup source
+- Migration report, Windows build instructions, Phase 1.2 motion report
+- CONTINUATION_PROMPT_PHASE_1_2.md
+
+Validation performed in the authoring environment
+- XML/XAML/project/manifest well-formedness: PASS
+- XAML event-handler name cross-check: PASS
+- XAML resource-key reference cross-check: PASS
+- duplicate x:Name cross-check: PASS
+- basic C# brace count smoke check: PASS
+- ZIP integrity: validated after packaging
+
+Not verified
+- .NET build, XAML compilation, unit tests, launching WPF, animation frame rate, DPI/accessibility behavior, Windows installer creation
+- Real Windows VPN tunnel / data plane remains unimplemented
+
+The current Windows project does not provide a functioning VPN connection. The UI does not simulate a connected state.

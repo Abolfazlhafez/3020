@@ -1,0 +1,24 @@
+FoxyVPN Windows conversion — Phase 1.8 package manifest
+
+Included:
+- Original Android/Kotlin/Gradle project preserved unchanged by the Windows-port work.
+- Native WPF/.NET 8 Windows solution, xUnit source, installer script, third-party notices and Windows CI workflow.
+- 2027 motion-led Windows UI, Reduce Motion, themes, Windows startup options, Firefox Account/API support, server catalog, settings/logs/diagnostics and upstream proxy configuration.
+- HTTP/2 CONNECT/TLS transport with Guardian pass provider and optional upstream HTTP CONNECT/SOCKS5 chaining; local SOCKS5 and DNS-only relay.
+- HEV native C API lifecycle and Wintun/HEV pinned native build steps in Windows CI.
+- Registered system tunnel ordering plus journaled IPv4/IPv6 routes, stable network-interface identity, prior metric restoration, DNS NRPT ownership, explicit edge/gateway bypass, cross-process lock and persistent Windows Firewall public-egress guard.
+- Startup recovery for a pending route journal and a route-transaction refresh method for newly active or renamed physical interfaces.
+- Network address/availability and suspend/resume monitoring with fail-closed fault state on unhealthy upstream binding.
+- Background Guardian proxy-pass renewal for the full-system session; pure scheduling helper and xUnit source.
+- Startup notice/recovery path for an existing route journal.
+- Updated migration report, Phase 1.8 report, package manifest and Phase 1.9 continuation prompt.
+
+Verification status:
+- Static structure check: 11 XML/XAML/project/manifest files parsed, 2 solution references found with no missing project paths, 28 XAML event handlers checked with none unresolved, 49 C# files scanned with no lexical string/comment/delimiter errors.
+- .NET SDK/MSBuild are unavailable in the authoring environment. Restore/build/xUnit have not been run.
+- Windows CI/native HEV build, Wintun startup, live Guardian/H2 interoperability, real Windows route/NRPT/Firewall behavior, adapter handover and IPv4/IPv6/DNS leak tests have not been run.
+- No verified EXE, portable runtime or installer was generated here.
+- HTTP/2 TCP CONNECT cannot provide general UDP/QUIC; DNS-only relay remains the only UDP path.
+- User-mediated anti-bot challenge and safe Windows per-application split tunneling remain open coding items.
+
+This archive is a development source milestone, not a verified production VPN release. Comprehensive testing remains deferred by user preference until the coding backlog is complete.

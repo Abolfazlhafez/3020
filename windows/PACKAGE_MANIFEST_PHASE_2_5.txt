@@ -1,0 +1,18 @@
+FoxyVPN Phase 2.5 package manifest
+Windows application version: 2.5.0
+Input baseline: Phase 2.4 full package
+Scope: DNS response correlation hardening; Android sources preserved
+
+Key changes:
+- windows/FoxyVPN.Windows/Services/DnsMessageRules.cs
+- windows/FoxyVPN.Windows/Services/WindowsSocks5UdpDnsRelay.cs
+- windows/FoxyVPN.Tests/DnsMessageRulesTests.cs
+- Windows app, installer, and CI installer version metadata aligned to 2.5.0
+- Phase 2.5 report and continuation prompt included in CI artifact allowlist
+
+Source/test status:
+- Test cases are authored but have not been executed.
+- No dotnet restore/build/test, HEV/Wintun native build, live VPN, DNS/IPv4/IPv6 leak test, rollback acceptance, portable publish, or installer generation is claimed.
+- Static package checks do not prove runtime operation.
+
+Limitations retained: general UDP/QUIC and per-application split tunneling are not supported. No direct-network fallback is added for DNS relay.

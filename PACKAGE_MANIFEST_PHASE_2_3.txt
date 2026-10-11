@@ -1,0 +1,6 @@
+FoxyVPN Android + Windows — Phase 2.3.0 Windows source update
+
+The original Android project files are preserved. The Windows project has been updated to version 2.3.0 with stricter HTTP/2 response status validation and additional test source.
+
+Important: test source is not evidence of test execution. Build, live VPN, native engine, routing, leak testing and installer acceptance remain pending.
+See windows/PHASE_2_3_REPORT.md and windows/CONTINUATION_PROMPT_PHASE_2_3.md.

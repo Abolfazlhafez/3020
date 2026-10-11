@@ -1,0 +1,23 @@
+FoxyVPN Windows conversion — Phase 1.7 package manifest
+
+Included:
+- Preserved original Android/Kotlin/Gradle source tree.
+- Native Windows WPF/.NET 8 solution and xUnit source.
+- 2027 motion-led desktop UI, Reduce Motion, themes, auto-start, start minimized, favorites, live server catalog, account/settings/logging and diagnostics.
+- HTTP/2 CONNECT transport, Guardian proxy-pass integration, optional upstream HTTP CONNECT/SOCKS5 chaining, loopback-only SOCKS5 and DNS-only UDP relay source.
+- HEV 2.17.1 C-API lifecycle code, Android-aligned YAML writer and Windows CI native build pipeline.
+- Registered full-system Windows runtime source wiring HTTP/2 -> SOCKS5 -> HEV/Wintun -> IPv4/IPv6 route/DNS transaction.
+- Route journal with stable interface identity, previous interface metrics, root NRPT rule ownership, explicit gateway/upstream bypass routes, cross-process route mutation lock, and persistent Windows Firewall public-egress guard removed only after verified rollback.
+- Separate IPv4/IPv6 kill-switch CIDR builder and xUnit source for address exclusions/non-overlap and unexpected runtime loss state.
+- Updated migration report, phase report, package manifest and code-first continuation prompt.
+
+Verification limits:
+- The user requested coding/integration first and comprehensive testing at the end. Only lightweight structural validation is performed during coding.
+- .NET SDK/MSBuild are unavailable here; restore/build/xUnit have not been run.
+- GitHub Actions native build, HEV runtime startup, Wintun adapter creation, real Guardian/edge interoperability and actual route/DNS/firewall behavior have not been run.
+- No TCP/DNS/IPv4/IPv6 leakage or crash-recovery test was executed.
+- No portable EXE or installer was generated in this environment.
+- General UDP/QUIC remains unsupported by the current TCP-CONNECT-only edge.
+- Anti-bot challenge parity and safe per-application split tunneling remain open coding items.
+
+This source package is not a verified production VPN release. Final acceptance depends on completing remaining code parity, then running the comprehensive Windows build/runtime/security suite.

@@ -1,0 +1,36 @@
+FoxyVPN Phase 2.3 package manifest
+Application version: 2.3.0
+
+PACKAGE CONTENTS
+- Original Android/Kotlin app preserved under app/.
+- Native Windows WPF/.NET 8 solution under windows/.
+- New HTTP/2 protocol validation source: windows/FoxyVPN.Windows/Services/Http2ProtocolRules.cs.
+- New unit-test source: windows/FoxyVPN.Tests/Http2ProtocolRulesTests.cs.
+- Windows build/test/native dependency/portable publish/Inno Setup workflow under .github/workflows/windows-build.yml.
+- Historical phase prompts, migration reports, third-party notices, and current continuation instructions.
+
+PHASE 2.2 CODE CHANGES
+- Serialize HTTP/2 stream allocation, registration and HEADERS emission while allowing token acquisition and active streams to remain concurrent.
+- Use a long stream-ID counter and disable new streams rather than allowing integer wraparound.
+- Keep a started HTTP/2 frame together despite caller cancellation; bound writes to 15 seconds and abort the shared transport on failure.
+- Enforce non-increasing GOAWAY last-stream IDs and stricter idle/closed-stream behavior for RST_STREAM, WINDOW_UPDATE, DATA and HEADERS.
+- Validate HTTP/2 response pseudo-header ordering, lowercase/token field names, response field values, unique :status, three-digit status syntax, at most 128 fields and 64 KiB of decoded header data.
+- Avoid duplicate RST_STREAM on CONNECT rejection.
+- Author test source for GOAWAY monotonicity, idle stream classification, status syntax and response header validation. These tests were not run.
+
+STATIC CHECK RESULTS (NOT A BUILD OR TEST RUN)
+- 31 XML/XAML/project/manifest files parsed with no XML parse errors.
+- Both project paths in windows/FoxyVPN.sln exist.
+- No missing explicitly declared resource/icon/manifest paths found.
+- 9 XAML files and 30 recognized event-handler references inspected; no missing handlers found.
+- 57 C# files passed a lexer-based delimiter-balance heuristic.
+- Windows workflow YAML parsed; a build job was found.
+- Version metadata matches 2.3.0 in the WPF project, Inno Setup script and CI installer invocation.
+- Both output ZIPs were integrity-checked; SHA-256 hashes are supplied separately.
+
+NOT VERIFIED / KNOWN LIMITATIONS
+- No dotnet restore/build/test or Windows CI run was performed in this authoring environment; tests are intentionally deferred by the project owner until coding is complete.
+- No HEV/Wintun native build/ABI/load test, real Firefox/Guardian session, live HTTP/2 edge connection, Windows route transaction or live VPN test was performed.
+- No DNS/IPv4/IPv6 leak test, crash/reboot route recovery test, installer generation, or Windows 10/11 acceptance test was performed.
+- General UDP/QUIC and per-application split tunneling remain unsupported/unverified. The edge currently provides TCP CONNECT; DNS-only UDP support is source-authored but not live-tested.
+- No EXE installer or portable runtime binary is claimed as generated in this environment.

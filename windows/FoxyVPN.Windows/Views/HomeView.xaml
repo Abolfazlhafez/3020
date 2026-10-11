@@ -1,0 +1,97 @@
+<UserControl x:Class="FoxyVPN.Windows.Views.HomeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="HomeView_Loaded" Unloaded="HomeView_Unloaded">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel x:Name="ContentStack" MaxWidth="1100" HorizontalAlignment="Stretch">
+
+            <!-- Hero: one clean surface, status capsule, one primary action. -->
+            <Border Background="{DynamicResource CardBrush}" CornerRadius="30" Padding="40" Margin="0,0,0,18" Effect="{StaticResource SoftCardShadow}">
+                <Grid MinHeight="300" ClipToBounds="True">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="1.15*"/><ColumnDefinition Width="0.85*"/></Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center" MaxWidth="540" Margin="0,0,16,0">
+                        <Border HorizontalAlignment="Left" Background="{DynamicResource SubtleAccentBrush}" CornerRadius="20" Padding="12,6" Margin="0,0,0,18">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="7" Height="7" Fill="#E8A947" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                <TextBlock x:Name="RuntimeBadgeText" Text="SYSTEM VPN OFFLINE" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <TextBlock x:Name="UptimeText" Visibility="Collapsed" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" Margin="2,-8,0,12" />
+                        <TextBlock Text="Private by design." FontSize="36" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                        <TextBlock Text="Transparent by default." FontSize="36" FontWeight="Bold" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                        <TextBlock Text="Proxy-only mode starts a local SOCKS5 endpoint over TLS/HTTP/2 without redirecting Windows traffic. The system-wide tunnel has not yet been verified on real Windows hardware, so the app never shows a connected state it has not confirmed." Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" LineHeight="20" TextWrapping="Wrap" Margin="0,14,0,0" />
+                        <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
+                            <Button x:Name="ConnectButton" Content="Run readiness preflight   ↗" Click="ConnectButton_Click" Background="{DynamicResource AccentBrush}" Foreground="White" BorderThickness="0" Padding="22,12" />
+                            <Button Content="Explore locations" Click="ChooseLocation_Click" Background="{DynamicResource WindowBackgroundBrush}" BorderThickness="0" Padding="20,12" Margin="10,4,0,4" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Grid x:Name="OrbitVisual" Grid.Column="1" Panel.ZIndex="1" Width="250" Height="250" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Ellipse Width="230" Height="230" Stroke="{DynamicResource BorderBrushSoft}" StrokeThickness="1" />
+                        <Ellipse Width="190" Height="190" Stroke="{DynamicResource BorderBrushSoft}" StrokeThickness="1" StrokeDashArray="2 5" />
+                        <Ellipse x:Name="PulseRingOne" Width="152" Height="152" Stroke="{DynamicResource AccentBrush}" StrokeThickness="2" Opacity="0.45" RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform><ScaleTransform ScaleX="0.86" ScaleY="0.86" /></Ellipse.RenderTransform>
+                        </Ellipse>
+                        <Ellipse x:Name="PulseRingTwo" Width="128" Height="128" Stroke="{DynamicResource AccentCyanBrush}" StrokeThickness="1.5" Opacity="0.3" RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform><ScaleTransform ScaleX="0.88" ScaleY="0.88" /></Ellipse.RenderTransform>
+                        </Ellipse>
+                        <Grid x:Name="OrbitRotor" RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform><RotateTransform Angle="0" /></Grid.RenderTransform>
+                            <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,11,0,0" />
+                            <Ellipse Width="5" Height="5" Fill="{DynamicResource AccentCyanBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,20,0" />
+                        </Grid>
+                        <Border Width="96" Height="96" CornerRadius="48" Background="{DynamicResource SubtleAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Border.Effect><DropShadowEffect Color="#007AFF" BlurRadius="30" ShadowDepth="0" Opacity="0.25" /></Border.Effect>
+                            <TextBlock Text="🦊" FontSize="46" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </Grid>
+                    <Ellipse x:Name="AmbientGlow" Panel.ZIndex="0" Grid.Column="1" Width="190" Height="190" Fill="{DynamicResource AccentBrush}" Opacity="0.06" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                        <Ellipse.Effect><BlurEffect Radius="35" /></Ellipse.Effect>
+                    </Ellipse>
+                </Grid>
+            </Border>
+
+            <!-- Three quiet summary cards. -->
+            <Grid Margin="0,0,0,18">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Style="{StaticResource HoverCardStyle}" Background="{DynamicResource CardBrush}" CornerRadius="22" Padding="22" Margin="0,0,7,0">
+                    <StackPanel>
+                        <TextBlock Text="Location" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" FontWeight="SemiBold" />
+                        <TextBlock x:Name="SelectedLocationText" Text="Recommended location" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,10,0,4" TextWrapping="Wrap" />
+                        <TextBlock x:Name="SelectedEndpointText" Text="No endpoint selected" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                        <Button Content="Choose location  →" HorizontalAlignment="Left" Click="ChooseLocation_Click" Margin="0,14,0,0" Padding="14,8" Background="{DynamicResource WindowBackgroundBrush}" BorderThickness="0" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Style="{StaticResource HoverCardStyle}" Background="{DynamicResource CardBrush}" CornerRadius="22" Padding="22" Margin="7,0,7,0">
+                    <StackPanel>
+                        <TextBlock Text="Identity" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" FontWeight="SemiBold" />
+                        <TextBlock x:Name="AccountStateText" Text="Not signed in" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,10,0,4" />
+                        <TextBlock Text="Firefox Account and quota status" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                        <Button x:Name="AccountButton" Content="Open account  →" HorizontalAlignment="Left" Click="AccountButton_Click" Margin="0,14,0,0" Padding="14,8" Background="{DynamicResource WindowBackgroundBrush}" BorderThickness="0" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource HoverCardStyle}" Background="{DynamicResource CardBrush}" CornerRadius="22" Padding="22" Margin="7,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Platform" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" FontWeight="SemiBold" />
+                        <TextBlock Text="Native Windows" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,10,0,4" />
+                        <TextBlock Text="WPF · Windows 10 / 11" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" />
+                        <TextBlock x:Name="PlatformRuntimeText" Text="System tunnel engine pending" FontSize="12" Foreground="#B77A20" FontWeight="SemiBold" Margin="0,16,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Border Background="{DynamicResource CardBrush}" CornerRadius="20" Padding="18" Margin="0,0,0,12" Effect="{StaticResource SoftCardShadow}">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Border Width="36" Height="36" CornerRadius="12" Background="{DynamicResource SubtleAccentBrush}">
+                        <TextBlock Text="✦" Foreground="{DynamicResource AccentBrush}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Live integrations" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                        <TextBlock Text="Firefox Accounts sign-in and email verification · Mozilla live server catalog · Guardian quota requests · DPAPI-protected local settings · diagnostic export" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

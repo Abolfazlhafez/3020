@@ -1,0 +1,23 @@
+*.iml
+.gradle/
+.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+app/build/
+*.apk
+*.aab
+*.keystore
+*.jks
+keystore.properties
+app/src/main/jni/
+
+# Windows/.NET build output
+**/bin/
+**/obj/
+/artifacts/
+*.user
+*.suo

@@ -1,0 +1,5 @@
+<resources>
+    <style name="Theme.FoxyVpn" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/ios_grouped_background</item>
+    </style>
+</resources>

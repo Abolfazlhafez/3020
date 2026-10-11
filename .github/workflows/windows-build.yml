@@ -1,0 +1,236 @@
+name: Windows desktop build
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'windows/**'
+      - '.github/workflows/windows-build.yml'
+  pull_request:
+    paths:
+      - 'windows/**'
+      - '.github/workflows/windows-build.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Set up MSYS2 for the pinned HEV native tunnel
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          update: true
+          install: base-devel gcc binutils git file
+
+      - name: Build pinned HEV tun2socks shared library
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          export MSYS=winsymlinks:native
+          mkdir -p native
+          git clone --branch 2.17.1 --depth 1 --recursive --shallow-submodules https://github.com/heiher/hev-socks5-tunnel.git native/hev-socks5-tunnel
+          cd native/hev-socks5-tunnel
+          git rev-parse HEAD | tee hev-commit.txt
+          # GNU ld on MSYS/Cygwin resolves -lNAME only to lib<NAME>.dll.a,
+          # lib<NAME>.a, msys-<NAME>.dll or lib<NAME>.dll - never to the
+          # lib<NAME>.so files that `make tp-shared` produces (this was the
+          # "cannot find -lyaml/-llwip/-lhev-task-system" failure). Build the
+          # third-party libraries as static archives (the same way upstream's
+          # own Windows build does) and link them into the single DLL.
+          make tp-static -j"$(nproc)"
+          for a in third-part/yaml/bin/libyaml.a \
+                   third-part/lwip/bin/liblwip.a \
+                   third-part/hev-task-system/bin/libhev-task-system.a; do
+            test -s "$a" || { echo "::error::missing static archive $a"; exit 1; }
+          done
+          # `-o tp-shared`: treat the phony tp-shared target as up to date so
+          # make does not rebuild the .so files (which would sit next to the
+          # .a files and are not needed for linking).
+          make -o tp-shared shared -j"$(nproc)"
+          HEV_SO=bin/libhev-socks5-tunnel.so
+          test -s "$HEV_SO"
+          NATIVE_OUT="$GITHUB_WORKSPACE/artifacts/native"
+          mkdir -p "$NATIVE_OUT"
+          cp "$HEV_SO" "$NATIVE_OUT/hev-socks5-tunnel.dll"
+          cp LICENSE "$NATIVE_OUT/HEV-LICENSE.txt"
+
+          # The file name proves nothing: require a real PE32+ x86-64 DLL
+          # (not ELF) that exports the C API used by WindowsHevNativeCore.
+          assert_pe_x64() {
+            local f="$1" fmt
+            fmt="$(objdump -f "$f" 2>/dev/null | awk '/file format/ {print $NF}')"
+            if [ "$fmt" != "pei-x86-64" ]; then
+              echo "::error::$f is not a PE x86-64 binary (objdump format: '${fmt:-unknown}')"
+              file "$f" || true
+              exit 1
+            fi
+          }
+          assert_pe_x64 "$NATIVE_OUT/hev-socks5-tunnel.dll"
+          objdump -p "$NATIVE_OUT/hev-socks5-tunnel.dll" > hev-pe-headers.txt
+          grep -E 'hev_socks5_tunnel_main_from_file' hev-pe-headers.txt
+          grep -E 'hev_socks5_tunnel_quit' hev-pe-headers.txt
+
+          # Third-party libraries are linked statically into the DLL, so there
+          # is nothing to bundle from third-part/. (The wintun.dll shipped in
+          # the HEV tree is deliberately NOT copied; the verified official
+          # Wintun runtime is added by a later step.)
+          if find third-part -path third-part/wintun -prune -o -type f \( -name '*.so' -o -name '*.dll' \) -print | grep -q .; then
+            echo "Note: shared third-party libraries exist but are not bundled:"
+            find third-part -path third-part/wintun -prune -o -type f \( -name '*.so' -o -name '*.dll' \) -print
+          fi
+
+          # Resolve every import: bundle MSYS runtime DLLs from /usr/bin, accept
+          # genuine Windows system DLLs, and FAIL on anything else. Windows
+          # system DLLs are never copied into the package.
+          for pass in 1 2 3 4 5 6; do
+            changed=0
+            for bin in "$NATIVE_OUT"/*.dll "$NATIVE_OUT"/*.so; do
+              [ -f "$bin" ] || continue
+              while IFS= read -r imp; do
+                [ -n "$imp" ] || continue
+                if ls "$NATIVE_OUT" | grep -qix -- "$imp"; then continue; fi
+                if [ -f "/usr/bin/$imp" ]; then
+                  assert_pe_x64 "/usr/bin/$imp"
+                  cp "/usr/bin/$imp" "$NATIVE_OUT/$imp"
+                  changed=1
+                elif ls "$(cygpath -S)" 2>/dev/null | grep -qix -- "$imp" || [[ "${imp,,}" == api-ms-win-* ]]; then
+                  :
+                else
+                  echo "::error::Unresolved import '$imp' required by $(basename "$bin")"
+                  exit 1
+                fi
+              done < <(objdump -p "$bin" | awk '/DLL Name:/ {print $3}')
+            done
+            [ "$changed" -eq 1 ] || break
+          done
+          [ "$changed" -eq 0 ] || { echo "::error::Native dependency resolution did not converge"; exit 1; }
+
+          cp hev-commit.txt "$NATIVE_OUT/HEV-SOURCE-COMMIT.txt"
+          cp hev-pe-headers.txt "$NATIVE_OUT/HEV-PE-HEADERS.txt"
+          sha256sum "$NATIVE_OUT"/*.dll | tee "$NATIVE_OUT/NATIVE-SHA256.txt"
+
+      - name: Download and verify official Wintun x64 runtime
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'wintun-0.14.1.zip'
+          $extract = Join-Path $env:RUNNER_TEMP 'wintun-0.14.1'
+          Invoke-WebRequest -Uri 'https://www.wintun.net/builds/wintun-0.14.1.zip' -OutFile $archive
+          $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+          $expected = '07c256185d6ee3652e09fa55c0b673e2624b565e02c4b9091c79ca7d2f24ef51'
+          if ($actual -ne $expected) { throw "Wintun archive SHA-256 mismatch: $actual" }
+          Expand-Archive -LiteralPath $archive -DestinationPath $extract -Force
+          $nativeOut = Join-Path $env:GITHUB_WORKSPACE 'artifacts/native'
+          New-Item -ItemType Directory -Force -Path $nativeOut | Out-Null
+          $wintunDll = Join-Path $extract 'wintun/bin/amd64/wintun.dll'
+          $signature = Get-AuthenticodeSignature -LiteralPath $wintunDll
+          if ($signature.Status -ne 'Valid') { throw "Wintun Authenticode signature is not valid: $($signature.Status)" }
+          if ($signature.SignerCertificate.Subject -notmatch 'WireGuard LLC') { throw "Unexpected Wintun signer: $($signature.SignerCertificate.Subject)" }
+          Copy-Item $wintunDll (Join-Path $nativeOut 'wintun.dll') -Force
+          $license = Get-ChildItem -Path $extract -Recurse -Filter 'prebuilt-binaries-license.txt' | Select-Object -First 1
+          if ($license) { Copy-Item $license.FullName (Join-Path $nativeOut 'WINTUN-PREBUILT-LICENSE.txt') -Force }
+
+      - name: Restore solution
+        run: dotnet restore windows/FoxyVPN.sln
+
+      - name: Build solution
+        run: dotnet build windows/FoxyVPN.sln --configuration Release --no-restore
+
+      - name: Run automated tests
+        run: dotnet test windows/FoxyVPN.sln --configuration Release --no-build --logger "trx;LogFileName=foxyvpn-tests.trx"
+
+      - name: Publish self-contained portable build
+        run: dotnet publish windows/FoxyVPN.Windows/FoxyVPN.Windows.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true --output artifacts/portable
+
+      - name: Bundle native tunnel runtime into portable build
+        shell: pwsh
+        run: |
+          $native = Join-Path $env:GITHUB_WORKSPACE 'artifacts/native'
+          $portable = Join-Path $env:GITHUB_WORKSPACE 'artifacts/portable'
+          if (-not (Test-Path (Join-Path $native 'hev-socks5-tunnel.dll'))) { throw 'HEV native library artifact is missing.' }
+          if (-not (Test-Path (Join-Path $native 'wintun.dll'))) { throw 'Verified Wintun runtime artifact is missing.' }
+          Copy-Item -Path (Join-Path $native '*') -Destination $portable -Recurse -Force
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build installer
+        shell: cmd
+        working-directory: windows\installer
+        run: '"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=2.6.0 /DSourceDir="..\..\artifacts\portable" /DOutputDir="..\..\artifacts\installer" FoxyVPN.iss'
+
+      - name: Upload portable build and installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: FoxyVPN-Windows-x64
+          path: |
+            artifacts/portable/**
+            artifacts/installer/*.exe
+            windows/MIGRATION_REPORT.md
+            windows/README_WINDOWS.md
+            PHASE_1_5_VPN_TRANSPORT_REPORT.md
+            CONTINUATION_PROMPT_PHASE_1_5.md
+            PHASE_1_6_HEV_NATIVE_CORE_REPORT.md
+            CONTINUATION_PROMPT_PHASE_1_6.md
+            PHASE_1_7_FULL_TUNNEL_ORCHESTRATION_REPORT.md
+            CONTINUATION_PROMPT_PHASE_1_7.md
+            PHASE_1_8_CONNECTIVITY_AND_RENEWAL_REPORT.md
+            CONTINUATION_PROMPT_PHASE_1_8.md
+            PHASE_1_9_INTERACTIVE_CHALLENGE_AND_STARTUP_REPORT.md
+            CONTINUATION_PROMPT_PHASE_1_9.md
+            PACKAGE_MANIFEST_PHASE_1_9.txt
+            PHASE_2_0_PROXY_CHAIN_HARDENING_REPORT.md
+            CONTINUATION_PROMPT_PHASE_2_0.md
+            PACKAGE_MANIFEST_PHASE_2_0.txt
+            PHASE_2_1_LIFECYCLE_HARDENING_REPORT.md
+            CONTINUATION_PROMPT_PHASE_2_1.md
+            PACKAGE_MANIFEST_PHASE_2_1.txt
+            PHASE_2_2_HTTP2_PROTOCOL_HARDENING_REPORT.md
+            CONTINUATION_PROMPT_PHASE_2_2.md
+            PACKAGE_MANIFEST_PHASE_2_2.txt
+            windows/PHASE_2_1_LIFECYCLE_HARDENING_REPORT.md
+            windows/CONTINUATION_PROMPT_PHASE_2_1.md
+            windows/PHASE_2_2_HTTP2_PROTOCOL_HARDENING_REPORT.md
+            windows/PHASE_2_4_HTTP2_INFORMATIONAL_RESPONSE_REPORT.md
+            windows/PHASE_2_4_REPORT.md
+            windows/CONTINUATION_PROMPT_PHASE_2_4.md
+            windows/PACKAGE_MANIFEST_PHASE_2_4.txt
+            windows/PHASE_2_5_DNS_RESPONSE_CORRELATION_REPORT.md
+            windows/PHASE_2_5_REPORT.md
+            windows/CONTINUATION_PROMPT_PHASE_2_5.md
+            windows/PACKAGE_MANIFEST_PHASE_2_5.txt
+            windows/PHASE_2_6_REPORT.md
+            windows/PHASE_2_6_DOH_HTTP_RESPONSE_VALIDATION_REPORT.md
+            windows/CONTINUATION_PROMPT_PHASE_2_6.md
+            windows/PACKAGE_MANIFEST_PHASE_2_6.txt
+            PHASE_2_6_REPORT.md
+            CONTINUATION_PROMPT_PHASE_2_6.md
+            PACKAGE_MANIFEST_PHASE_2_6.txt
+            PHASE_2_5_REPORT.md
+            CONTINUATION_PROMPT_PHASE_2_5.md
+            PACKAGE_MANIFEST_PHASE_2_5.txt
+            windows/CONTINUATION_PROMPT_PHASE_2_2.md
+            windows/PACKAGE_MANIFEST_PHASE_2_2.txt
+            windows/PHASE_2_3_REPORT.md
+            windows/PHASE_2_3_HTTP2_STATUS_VALIDATION_REPORT.md
+            windows/CONTINUATION_PROMPT_PHASE_2_3.md
+            windows/PHASE_2_4_REPORT.md
+            windows/CONTINUATION_PROMPT_PHASE_2_4.md
+            windows/PACKAGE_MANIFEST_PHASE_2_4.txt
+            PACKAGE_MANIFEST_PHASE_1_8.txt
+            windows/FoxyVPN.Windows/Native/README.md
+            windows/THIRD_PARTY_NOTICES.md
+            WINDOWS_SOURCE_README.md
+            PACKAGE_MANIFEST_PHASE_1_7.txt
+          if-no-files-found: error
