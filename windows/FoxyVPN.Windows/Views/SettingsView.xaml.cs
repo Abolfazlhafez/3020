@@ -30,6 +30,7 @@ public partial class SettingsView : UserControl, IRefreshableView
     {
         var s = App.Services.Settings.Current;
         SelectCombo(ThemeCombo, s.ThemeMode);
+        LowResourceModeCheck.IsChecked = s.LowResourceMode;
         ReduceMotionCheck.IsChecked = s.ReduceMotion;
         StartWithWindowsCheck.IsChecked = WindowsStartupService.IsEnabled();
         StartMinimizedCheck.IsChecked = s.StartMinimized;
@@ -114,6 +115,7 @@ public partial class SettingsView : UserControl, IRefreshableView
             App.Services.Settings.Update(s =>
             {
                 s.ThemeMode = ComboValue(ThemeCombo, "System");
+                s.LowResourceMode = LowResourceModeCheck.IsChecked == true;
                 s.ReduceMotion = ReduceMotionCheck.IsChecked == true;
                 s.StartWithWindows = startWithWindows;
                 s.StartMinimized = startMinimized;
@@ -146,7 +148,7 @@ public partial class SettingsView : UserControl, IRefreshableView
                 App.Services.Log.Error("Startup", $"Unable to apply auto-start settings: {startupEx.Message}");
             }
             ThemeManager.Apply(ComboValue(ThemeCombo, "System"));
-            App.Services.Log.Info("Settings", "Application settings updated and stored with Windows DPAPI. Motion preferences take effect on the next page entry.");
+            App.Services.Log.Info("Settings", "Application settings updated and stored with Windows DPAPI. Low-resource and motion preferences are stored. Low-resource mode disables continuous ambient animation.");
             if (string.IsNullOrWhiteSpace(StatusText.Text) || !StatusText.Text.StartsWith("Settings saved, but Windows auto-start", StringComparison.Ordinal))
                 StatusText.Text = "Settings saved. Auto-start, server refresh and motion preferences are stored. VPN transport-dependent settings remain inactive until the Windows tunnel engine is ported.";
         }
