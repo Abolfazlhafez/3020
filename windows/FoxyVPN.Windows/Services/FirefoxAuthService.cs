@@ -161,8 +161,8 @@ public sealed class FirefoxAuthService : IDisposable
         if (sessionToken is not null)
         {
             var (id, key) = DeriveHawkCredentials(sessionToken);
-            authorization = BuildHawkHeader(method, uri, id, key, bodyBytes);
-            CryptographicOperations.ZeroMemory(key);
+            try { authorization = BuildHawkHeader(method, uri, id, key, bodyBytes); }
+            finally { CryptographicOperations.ZeroMemory(key); }
         }
 
         using var request = new HttpRequestMessage(new HttpMethod(method), uri)
@@ -194,10 +194,22 @@ public sealed class FirefoxAuthService : IDisposable
     private static string DeriveAuthPassword(string email, string password)
     {
         var salt = Encoding.UTF8.GetBytes($"{ProtocolVersion}quickStretch:{email}");
-        var quickStretch = Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes(password), salt, 1000, HashAlgorithmName.SHA256, 32);
-        var result = Hkdf(quickStretch, $"{ProtocolVersion}authPW", 32);
-        CryptographicOperations.ZeroMemory(quickStretch);
-        return Convert.ToHexString(result).ToLowerInvariant();
+        var passwordBytes = Encoding.UTF8.GetBytes(password);
+        byte[]? quickStretch = null;
+        byte[]? result = null;
+        try
+        {
+            quickStretch = Rfc2898DeriveBytes.Pbkdf2(passwordBytes, salt, 1000, HashAlgorithmName.SHA256, 32);
+            result = Hkdf(quickStretch, $"{ProtocolVersion}authPW", 32);
+            return Convert.ToHexString(result).ToLowerInvariant();
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(passwordBytes);
+            CryptographicOperations.ZeroMemory(salt);
+            if (quickStretch is not null) CryptographicOperations.ZeroMemory(quickStretch);
+            if (result is not null) CryptographicOperations.ZeroMemory(result);
+        }
     }
 
     private static (string Id, byte[] Key) DeriveHawkCredentials(string sessionToken)
@@ -265,6 +277,8 @@ public sealed class FirefoxAuthService : IDisposable
         }
         CryptographicOperations.ZeroMemory(pseudoRandomKey);
         CryptographicOperations.ZeroMemory(salt);
+        CryptographicOperations.ZeroMemory(infoBytes);
+        if (previousBlock.Length > 0) CryptographicOperations.ZeroMemory(previousBlock);
         return result;
     }
 
