@@ -69,7 +69,7 @@ public partial class MainWindow : Window
             var startInfo = new ProcessStartInfo
             {
                 FileName = setupPath!,
-                Arguments = $"/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /LOG=\"{logPath}\"",
+                Arguments = $"/LOG=\"{logPath}\"",
                 UseShellExecute = true,
                 Verb = "runas",
                 WorkingDirectory = Path.GetTempPath()
