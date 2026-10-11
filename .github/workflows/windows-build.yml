@@ -147,9 +147,12 @@ jobs:
           choco install imagemagick --yes --no-progress
           $iconSource = Join-Path $env:GITHUB_WORKSPACE 'windows/FoxyVPN.Windows/Assets/foxy_app_icon.svg'
           $iconOutput = Join-Path $env:GITHUB_WORKSPACE 'windows/FoxyVPN.Windows/Assets/foxy_app_icon.ico'
+          $pngOutput = Join-Path $env:GITHUB_WORKSPACE 'windows/FoxyVPN.Windows/Assets/foxy_app_icon.png'
           if (-not (Test-Path $iconSource)) { throw 'Blue-white fox SVG source is missing.' }
           magick $iconSource -background none -define icon:auto-resize=256,128,64,48,32,16 $iconOutput
+          magick $iconSource -background none -resize 512x512 $pngOutput
           if (-not (Test-Path $iconOutput)) { throw 'Failed to generate Windows ICO.' }
+          if (-not (Test-Path $pngOutput)) { throw 'Failed to generate the in-app PNG logo.' }
 
       - name: Restore solution
         run: dotnet restore windows/FoxyVPN.sln
