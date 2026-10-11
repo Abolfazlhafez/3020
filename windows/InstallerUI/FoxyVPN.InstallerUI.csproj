@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>FoxyVPN-Installer</AssemblyName>
+    <RootNamespace>FoxyVPN.InstallerUI</RootNamespace>
+    <Version>2.6.0</Version>
+    <ApplicationIcon>..\FoxyVPN.Windows\Assets\foxy_app_icon.ico</ApplicationIcon>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\artifacts\installer\FoxyVPN-Setup-2.6.0-x64.exe"
+                      LogicalName="FoxyVPN.Setup.exe" />
+  </ItemGroup>
+</Project>
