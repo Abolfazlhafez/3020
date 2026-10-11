@@ -173,67 +173,23 @@ jobs:
       - name: Publish glass installer bootstrapper
         run: dotnet publish windows/InstallerUI/FoxyVPN.InstallerUI.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --output artifacts/bootstrapper
 
-      - name: Upload portable build and installer
+      - name: Create clean Windows release ZIP
+        shell: pwsh
+        run: |
+          $release = Join-Path $env:GITHUB_WORKSPACE 'artifacts/release'
+          New-Item -ItemType Directory -Force -Path $release | Out-Null
+          $stage = Join-Path $env:RUNNER_TEMP 'FoxyVPN-release'
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item 'artifacts/installer/FoxyVPN-Setup-2.6.0-x64.exe' (Join-Path $stage 'FoxyVPN-Setup.exe')
+          Copy-Item 'artifacts/bootstrapper/FoxyVPN-Installer.exe' (Join-Path $stage 'FoxyVPN-Installer.exe')
+          Copy-Item 'windows/README_WINDOWS.md' (Join-Path $stage 'README.txt')
+          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath (Join-Path $release 'FoxyVPN-Windows-x64.zip') -CompressionLevel Optimal -Force
+
+      - name: Upload clean Windows release
         uses: actions/upload-artifact@v4
         with:
-          name: FoxyVPN-Windows-x64
+          name: FoxyVPN-Windows-x64-Release
           path: |
-            artifacts/portable/**
-            artifacts/bootstrapper/*.exe
-            windows/MIGRATION_REPORT.md
-            windows/README_WINDOWS.md
-            PHASE_1_5_VPN_TRANSPORT_REPORT.md
-            CONTINUATION_PROMPT_PHASE_1_5.md
-            PHASE_1_6_HEV_NATIVE_CORE_REPORT.md
-            CONTINUATION_PROMPT_PHASE_1_6.md
-            PHASE_1_7_FULL_TUNNEL_ORCHESTRATION_REPORT.md
-            CONTINUATION_PROMPT_PHASE_1_7.md
-            PHASE_1_8_CONNECTIVITY_AND_RENEWAL_REPORT.md
-            CONTINUATION_PROMPT_PHASE_1_8.md
-            PHASE_1_9_INTERACTIVE_CHALLENGE_AND_STARTUP_REPORT.md
-            CONTINUATION_PROMPT_PHASE_1_9.md
-            PACKAGE_MANIFEST_PHASE_1_9.txt
-            PHASE_2_0_PROXY_CHAIN_HARDENING_REPORT.md
-            CONTINUATION_PROMPT_PHASE_2_0.md
-            PACKAGE_MANIFEST_PHASE_2_0.txt
-            PHASE_2_1_LIFECYCLE_HARDENING_REPORT.md
-            CONTINUATION_PROMPT_PHASE_2_1.md
-            PACKAGE_MANIFEST_PHASE_2_1.txt
-            PHASE_2_2_HTTP2_PROTOCOL_HARDENING_REPORT.md
-            CONTINUATION_PROMPT_PHASE_2_2.md
-            PACKAGE_MANIFEST_PHASE_2_2.txt
-            windows/PHASE_2_1_LIFECYCLE_HARDENING_REPORT.md
-            windows/CONTINUATION_PROMPT_PHASE_2_1.md
-            windows/PHASE_2_2_HTTP2_PROTOCOL_HARDENING_REPORT.md
-            windows/PHASE_2_4_HTTP2_INFORMATIONAL_RESPONSE_REPORT.md
-            windows/PHASE_2_4_REPORT.md
-            windows/CONTINUATION_PROMPT_PHASE_2_4.md
-            windows/PACKAGE_MANIFEST_PHASE_2_4.txt
-            windows/PHASE_2_5_DNS_RESPONSE_CORRELATION_REPORT.md
-            windows/PHASE_2_5_REPORT.md
-            windows/CONTINUATION_PROMPT_PHASE_2_5.md
-            windows/PACKAGE_MANIFEST_PHASE_2_5.txt
-            windows/PHASE_2_6_REPORT.md
-            windows/PHASE_2_6_DOH_HTTP_RESPONSE_VALIDATION_REPORT.md
-            windows/CONTINUATION_PROMPT_PHASE_2_6.md
-            windows/PACKAGE_MANIFEST_PHASE_2_6.txt
-            PHASE_2_6_REPORT.md
-            CONTINUATION_PROMPT_PHASE_2_6.md
-            PACKAGE_MANIFEST_PHASE_2_6.txt
-            PHASE_2_5_REPORT.md
-            CONTINUATION_PROMPT_PHASE_2_5.md
-            PACKAGE_MANIFEST_PHASE_2_5.txt
-            windows/CONTINUATION_PROMPT_PHASE_2_2.md
-            windows/PACKAGE_MANIFEST_PHASE_2_2.txt
-            windows/PHASE_2_3_REPORT.md
-            windows/PHASE_2_3_HTTP2_STATUS_VALIDATION_REPORT.md
-            windows/CONTINUATION_PROMPT_PHASE_2_3.md
-            windows/PHASE_2_4_REPORT.md
-            windows/CONTINUATION_PROMPT_PHASE_2_4.md
-            windows/PACKAGE_MANIFEST_PHASE_2_4.txt
-            PACKAGE_MANIFEST_PHASE_1_8.txt
-            windows/FoxyVPN.Windows/Native/README.md
-            windows/THIRD_PARTY_NOTICES.md
-            WINDOWS_SOURCE_README.md
-            PACKAGE_MANIFEST_PHASE_1_7.txt
+            artifacts/release/FoxyVPN-Windows-x64.zip
+            artifacts/bootstrapper/FoxyVPN-Installer.exe
           if-no-files-found: error
