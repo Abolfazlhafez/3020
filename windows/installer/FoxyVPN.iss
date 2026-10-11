@@ -81,17 +81,16 @@ var
   ResultCode: Integer;
   RuntimePath: String;
 begin
+  { Prerequisites are optional during installation: never block FoxyVPN setup
+    solely because the runtime is missing, cannot be downloaded, or fails to install. }
   Result := True;
   if IsDotNet8DesktopRuntimeInstalled() then
     Exit;
 
   if MsgBox(
-    'FoxyVPN normally uses the Microsoft .NET 8 Desktop Runtime. It was not detected in the standard registry locations. Yes = download and install it from Microsoft. No = continue installing FoxyVPN without downloading anything; if a compatible runtime is already installed elsewhere, it may still work. If it is truly missing, FoxyVPN will not start until you install it.',
+    'The Microsoft .NET 8 Desktop Runtime was not detected. You can install it now to help FoxyVPN run, or choose No to skip this prerequisite and continue installing FoxyVPN. Skipping is allowed, but FoxyVPN may not start if a compatible runtime is not already available.',
     mbConfirmation, MB_YESNO) <> IDYES then
   begin
-    { Do not force an extra download. Continue in case the runtime is installed
-      in a custom or per-user location that cannot be detected here. }
-    Result := True;
     Exit;
   end;
 
@@ -101,9 +100,8 @@ begin
       'dotnet-windowsdesktop-runtime.exe', '', nil);
   except
     MsgBox(
-      'The Microsoft .NET Desktop Runtime could not be downloaded. Check your internet connection, then install the x64 .NET 8 Desktop Runtime from https://dotnet.microsoft.com/download/dotnet/8.0 and run this installer again.',
-      mbError, MB_OK);
-    Result := False;
+      'The .NET Desktop Runtime could not be downloaded. FoxyVPN installation will continue without it. You can install the x64 .NET 8 Desktop Runtime later from https://dotnet.microsoft.com/download/dotnet/8.0.',
+      mbInformation, MB_OK);
     Exit;
   end;
 
@@ -112,26 +110,21 @@ begin
       SW_HIDE, ewWaitUntilTerminated, ResultCode) then
   begin
     MsgBox(
-      'The .NET Desktop Runtime installer could not be started. Install the x64 .NET 8 Desktop Runtime from https://dotnet.microsoft.com/download/dotnet/8.0 and run this installer again.',
-      mbError, MB_OK);
-    Result := False;
+      'The .NET Desktop Runtime installer could not be started. FoxyVPN installation will continue without it. You can install the runtime later from https://dotnet.microsoft.com/download/dotnet/8.0.',
+      mbInformation, MB_OK);
     Exit;
   end;
 
   if (ResultCode <> 0) and (ResultCode <> 3010) and (ResultCode <> 1641) then
   begin
     MsgBox(
-      'Microsoft .NET Desktop Runtime setup did not complete successfully. Install the x64 .NET 8 Desktop Runtime from https://dotnet.microsoft.com/download/dotnet/8.0 and run this installer again.',
-      mbError, MB_OK);
-    Result := False;
+      'The .NET Desktop Runtime setup did not complete successfully. FoxyVPN installation will continue anyway. If FoxyVPN does not start, install the x64 .NET 8 Desktop Runtime from https://dotnet.microsoft.com/download/dotnet/8.0.',
+      mbInformation, MB_OK);
     Exit;
   end;
 
   if not IsDotNet8DesktopRuntimeInstalled() then
-  begin
     MsgBox(
-      'The .NET 8 Desktop Runtime was not detected after setup. Install the x64 .NET 8 Desktop Runtime from https://dotnet.microsoft.com/download/dotnet/8.0 and run this installer again.',
-      mbError, MB_OK);
-    Result := False;
-  end;
+      'The .NET 8 Desktop Runtime was not detected after setup. FoxyVPN installation will continue anyway. If FoxyVPN does not start, install the x64 .NET 8 Desktop Runtime from https://dotnet.microsoft.com/download/dotnet/8.0.',
+      mbInformation, MB_OK);
 end;
