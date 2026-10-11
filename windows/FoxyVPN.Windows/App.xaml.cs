@@ -1,5 +1,7 @@
 using System.IO;
+using System.Text;
 using System.Windows;
+using System.Windows.Threading;
 using FoxyVPN.Windows.Services;
 
 namespace FoxyVPN.Windows;
@@ -7,6 +9,12 @@ namespace FoxyVPN.Windows;
 public partial class App : Application
 {
     public static AppServices Services { get; private set; } = null!;
+
+    private static readonly object StartupDiagnosticsLock = new();
+
+    private static string StartupDiagnosticsPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "FoxyVPN", "logs", "startup-crash.log");
 
     private void Card_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
@@ -20,36 +28,112 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        Services = new AppServices();
-        Services.Log.Info("Application", "FoxyVPN Windows started.");
         base.OnStartup(e);
-        var window = new MainWindow();
-        MainWindow = window;
-        ThemeManager.Apply(Services.Settings.Current.ThemeMode);
-        var startMinimized = e.Args.Any(arg => string.Equals(arg, "--minimized", StringComparison.OrdinalIgnoreCase));
-        if (startMinimized) window.WindowState = WindowState.Minimized;
-        window.Show();
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
 
-        // Recovery must complete before Connect on launch is allowed to touch the data plane.
-        // Starting automatically while a prior route journal remains would make ownership ambiguous.
-        _ = FinishStartupSequenceAsync(window);
+        try
+        {
+            Services = new AppServices();
+            Services.Log.Info("Application", "FoxyVPN Windows started.");
+            var window = new MainWindow();
+            MainWindow = window;
+            ThemeManager.Apply(Services.Settings.Current.ThemeMode);
+
+            var startMinimized = e.Args.Any(arg =>
+                string.Equals(arg, "--minimized", StringComparison.OrdinalIgnoreCase));
+            if (startMinimized)
+            {
+                window.WindowState = WindowState.Minimized;
+                window.ShowInTaskbar = true;
+            }
+            else
+            {
+                window.WindowState = WindowState.Normal;
+                window.ShowInTaskbar = true;
+            }
+
+            window.Show();
+            if (!startMinimized)
+            {
+                window.Activate();
+                window.Focus();
+            }
+
+            // Recovery must complete before Connect on launch is allowed to touch the data plane.
+            // Starting automatically while a prior route journal remains would make ownership ambiguous.
+            _ = FinishStartupSequenceAsync(window);
+        }
+        catch (Exception ex)
+        {
+            WriteStartupDiagnostic("FoxyVPN failed during startup.", ex);
+            MessageBox.Show(
+                "FoxyVPN could not open its main window. The error has been saved here:\n\n" +
+                StartupDiagnosticsPath + "\n\n" +
+                ex.GetType().FullName + ": " + ex.Message,
+                "FoxyVPN could not start",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Shutdown(-1);
+        }
+    }
+
+    private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        WriteStartupDiagnostic("An unhandled Windows UI exception occurred.", e.Exception);
+        MessageBox.Show(
+            "FoxyVPN encountered an unexpected error. Diagnostic details were saved here:\n\n" +
+            StartupDiagnosticsPath + "\n\n" +
+            e.Exception.GetType().FullName + ": " + e.Exception.Message,
+            "FoxyVPN error",
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
+        // Leave the exception unhandled so WPF can shut down safely rather than continuing
+        // with potentially inconsistent UI or network state.
+    }
+
+    private static void WriteStartupDiagnostic(string heading, Exception exception)
+    {
+        try
+        {
+            var path = StartupDiagnosticsPath;
+            var directory = Path.GetDirectoryName(path);
+            if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
+            var entry = $"[{DateTimeOffset.Now:O}] {heading}{Environment.NewLine}{exception}{Environment.NewLine}{new string('-', 72)}{Environment.NewLine}";
+            lock (StartupDiagnosticsLock) File.AppendAllText(path, entry, Encoding.UTF8);
+        }
+        catch
+        {
+            // Diagnostics must never replace the original startup exception.
+        }
     }
 
     private async Task FinishStartupSequenceAsync(Window owner)
     {
-        var hasPendingRecovery = WindowsSystemRouteTransaction.HasPendingRecoveryJournal;
-        if (hasPendingRecovery)
+        try
         {
-            if (!WindowsSystemTunnelRuntime.IsCurrentProcessAdministrator())
+            var hasPendingRecovery = WindowsSystemRouteTransaction.HasPendingRecoveryJournal;
+            if (hasPendingRecovery)
             {
-                MessageBox.Show(owner,
-                    "A previous FoxyVPN system-tunnel session left a recovery journal. Some public network traffic may remain blocked by the safety guard. Restart FoxyVPN with Run as administrator to safely restore its owned routes and firewall rules. Automatic connection has been skipped.",
-                    "FoxyVPN network recovery required", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                if (!WindowsSystemTunnelRuntime.IsCurrentProcessAdministrator())
+                {
+                    MessageBox.Show(owner,
+                        "A previous FoxyVPN system-tunnel session left a recovery journal. Some public network traffic may remain blocked by the safety guard. Restart FoxyVPN with Run as administrator to safely restore its owned routes and firewall rules. Automatic connection has been skipped.",
+                        "FoxyVPN network recovery required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                if (!await RecoverPreviousNetworkStateAsync(owner)) return;
             }
-            if (!await RecoverPreviousNetworkStateAsync(owner)) return;
+            await TryConnectOnLaunchAsync(owner);
         }
-        await TryConnectOnLaunchAsync(owner);
+        catch (Exception ex)
+        {
+            WriteStartupDiagnostic("FoxyVPN startup recovery/connection sequence failed unexpectedly.", ex);
+            Services.Log.Error("Startup", $"Startup sequence failed unexpectedly ({ex.GetType().Name}): {ex.Message}");
+            if (owner.WindowState == WindowState.Minimized) owner.WindowState = WindowState.Normal;
+            MessageBox.Show(owner,
+                "FoxyVPN opened, but its startup recovery sequence failed. The app remains open; review the diagnostic log.\n\n" + ex.Message,
+                "FoxyVPN startup warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private async Task<bool> RecoverPreviousNetworkStateAsync(Window owner)
