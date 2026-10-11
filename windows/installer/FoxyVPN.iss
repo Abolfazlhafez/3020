@@ -34,7 +34,7 @@ Name: "{group}\FoxyVPN"; Filename: "{app}\FoxyVPN.exe"
 Name: "{autodesktop}\FoxyVPN"; Filename: "{app}\FoxyVPN.exe"; Tasks: desktopicon
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional icons:"; Flags: unchecked
+Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional icons:"; Flags: checked
 
 [Run]
 Filename: "{app}\FoxyVPN.exe"; Description: "Launch FoxyVPN"; Flags: nowait postinstall skipifsilent
