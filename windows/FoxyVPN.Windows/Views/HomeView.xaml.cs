@@ -72,7 +72,7 @@ public partial class HomeView : UserControl, IRefreshableView
     private bool ConfirmDisconnectIfRequested()
     {
         if (!App.Services.Settings.Current.ConfirmDisconnect) return true;
-        return MessageBox.Show(this, "Disconnect FoxyVPN now?", "FoxyVPN",
+        return MessageBox.Show(Window.GetWindow(this), "Disconnect FoxyVPN now?", "FoxyVPN",
             MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
     }
 
@@ -267,7 +267,7 @@ public partial class HomeView : UserControl, IRefreshableView
                 if (!ConfirmDisconnectIfRequested()) return;
                 await App.Services.StopProxyOnlySessionAsync();
                 App.Services.Log.Info("VPNTransport", "User stopped proxy-only mode.");
-                MessageBox.Show(this, "The local SOCKS5 proxy has stopped. No Windows system routes were changed.", "FoxyVPN", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(Window.GetWindow(this), "The local SOCKS5 proxy has stopped. No Windows system routes were changed.", "FoxyVPN", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -279,7 +279,7 @@ public partial class HomeView : UserControl, IRefreshableView
                 ConnectButton.Content = "Restoring routes and DNS…";
                 await App.Services.StopSystemTunnelAsync();
                 App.Services.Log.Info("Tunnel", "User requested system VPN disconnect; owned routes and DNS policy were restored.");
-                MessageBox.Show(this,
+                MessageBox.Show(Window.GetWindow(this),
                     "FoxyVPN has disconnected. The DNS policy and routes owned by the tunnel were removed.",
                     "FoxyVPN", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
@@ -301,7 +301,7 @@ public partial class HomeView : UserControl, IRefreshableView
                     if (!TryCompleteFirefoxChallenge(challenge)) throw;
                     await App.Services.StartProxyOnlySessionAsync(); // one user-mediated retry only
                 }
-                MessageBox.Show(this,
+                MessageBox.Show(Window.GetWindow(this),
                     $"The local SOCKS5 proxy is active at 127.0.0.1:{App.Services.ProxyOnlyPort}.\n\nConfigure an application explicitly to use SOCKS5 at this address. Other applications and Windows system traffic are NOT redirected automatically. DNS-only UDP relay is not yet live-verified; other UDP (including QUIC) is dropped. Full-system VPN has not passed final Windows acceptance tests.",
                     "FoxyVPN · Proxy-only mode", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
@@ -322,7 +322,7 @@ public partial class HomeView : UserControl, IRefreshableView
 
             if (!report.CanConnect)
             {
-                MessageBox.Show(this, report.ToDisplayText(), "VPN runtime readiness", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(Window.GetWindow(this), report.ToDisplayText(), "VPN runtime readiness", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -341,31 +341,31 @@ public partial class HomeView : UserControl, IRefreshableView
             }
             if (!App.Services.Tunnel.IsConnected)
                 throw new IOException("The system tunnel runtime did not confirm every required layer active.");
-            MessageBox.Show(this,
+            MessageBox.Show(Window.GetWindow(this),
                 "The system tunnel is active. TCP traffic and DNS use the authenticated tunnel; the current edge protocol does not carry general UDP/QUIC, so those datagrams are dropped rather than sent directly. Run the final Windows forwarding and leak tests before relying on this build for sensitive traffic.",
                 "FoxyVPN · System tunnel", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (WindowsRouteTransactionException ex) when (ex.RollbackIncomplete)
         {
             App.Services.Log.Error("Tunnel", "Route rollback is incomplete; the data plane is being kept alive for safety.");
-            MessageBox.Show(this,
+            MessageBox.Show(Window.GetWindow(this),
                 ex.Message + "\n\nDo not close this app if traffic appears routed through FoxyVPN. Retry safe disconnect after the network stack is ready; the next elevated launch can also recover the journal.",
                 "FoxyVPN · Cleanup required", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         catch (GuardianChallengeRequiredException ex)
         {
             App.Services.Log.Warn("Guardian", "The Guardian challenge was not accepted after one user-mediated retry.");
-            MessageBox.Show(this, ex.Message + " Complete the verification and retry the connection. FoxyVPN did not bypass the challenge.", "Guardian verification required", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(Window.GetWindow(this), ex.Message + " Complete the verification and retry the connection. FoxyVPN did not bypass the challenge.", "Guardian verification required", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (FirefoxChallengeRequiredException ex)
         {
             App.Services.Log.Warn("FirefoxAuth", "The Firefox Accounts challenge was not accepted after one user-mediated retry.");
-            MessageBox.Show(this, ex.Message + " Complete the verification and retry the connection. FoxyVPN did not bypass the challenge.", "Firefox Accounts verification required", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(Window.GetWindow(this), ex.Message + " Complete the verification and retry the connection. FoxyVPN did not bypass the challenge.", "Firefox Accounts verification required", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (TunnelEngineUnavailableException ex)
         {
             App.Services.Log.Warn("Tunnel", $"Connection request was rejected: {ex.Message}");
-            MessageBox.Show(this, ex.Message, "Windows VPN engine unavailable", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(Window.GetWindow(this), ex.Message, "Windows VPN engine unavailable", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (OperationCanceledException)
         {
@@ -374,7 +374,7 @@ public partial class HomeView : UserControl, IRefreshableView
         catch (Exception ex)
         {
             App.Services.Log.Error("Tunnel", ex.Message);
-            MessageBox.Show(this, ex.Message, "Could not start VPN", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(Window.GetWindow(this), ex.Message, "Could not start VPN", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
