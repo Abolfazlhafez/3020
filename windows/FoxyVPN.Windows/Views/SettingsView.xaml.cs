@@ -105,6 +105,15 @@ public partial class SettingsView : UserControl, IRefreshableView
             return;
         }
 
+        var requestedProxyOnlyMode = ProxyOnlyModeCheck.IsChecked == true;
+        var currentSettings = App.Services.Settings.Current;
+        if (requestedProxyOnlyMode != currentSettings.ProxyOnlyMode &&
+            (App.Services.IsProxyOnlySessionActive || App.Services.Tunnel.State != WindowsTunnelState.Disconnected))
+        {
+            StatusText.Text = "Disconnect the current VPN session before switching Proxy-only mode. This avoids running the proxy and system tunnel at the same time.";
+            return;
+        }
+
         StatusText.Text = string.Empty;
         try
         {
