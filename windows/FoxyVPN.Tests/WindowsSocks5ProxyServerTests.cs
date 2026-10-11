@@ -15,7 +15,7 @@ public sealed class WindowsSocks5ProxyServerTests
     public async Task StartAsync_RejectsNonLoopbackBinding()
     {
         await using var server = new WindowsSocks5ProxyServer(new TestUpstreamProvider(1));
-        Assert.Throws<InvalidOperationException>(() => server.StartAsync("0.0.0.0", 0));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => server.StartAsync("0.0.0.0", 0));
         Assert.False(server.IsRunning);
     }
 
@@ -24,7 +24,7 @@ public sealed class WindowsSocks5ProxyServerTests
     {
         var upstream = new TestUpstreamProvider(1) { IsConnected = false };
         await using var server = new WindowsSocks5ProxyServer(upstream);
-        Assert.Throws<InvalidOperationException>(() => server.StartAsync("127.0.0.1", 0));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => server.StartAsync("127.0.0.1", 0));
         Assert.False(server.IsRunning);
     }
 
