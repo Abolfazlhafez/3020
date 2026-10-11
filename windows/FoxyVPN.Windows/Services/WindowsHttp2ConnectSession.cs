@@ -1105,7 +1105,10 @@ public sealed class WindowsHttp2ConnectSession : IUpstreamStreamProvider, IAsync
 
         public Stream Input => _input;
         public Stream Output => _output;
-        public ValueTask CompleteOutputAsync(CancellationToken cancellationToken) => _owner.CompleteOutputAsync(_state, cancellationToken);
+        public async ValueTask CompleteOutputAsync(CancellationToken cancellationToken)
+        {
+            await _owner.CompleteOutputAsync(_state, cancellationToken).ConfigureAwait(false);
+        }
 
         public async ValueTask DisposeAsync()
         {
