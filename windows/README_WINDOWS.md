@@ -18,16 +18,16 @@ dotnet build .\windows\FoxyVPN.sln --configuration Release
 dotnet test .\windows\FoxyVPN.sln --configuration Release
 ```
 
-Create a self-contained x64 publish folder:
+Create a compact, framework-dependent x64 publish folder. The app needs the .NET 8 Desktop Runtime; the distributed installer downloads and installs it from Microsoft only when it is missing:
 
 ```powershell
 dotnet publish .\windows\FoxyVPN.Windows\FoxyVPN.Windows.csproj `
-  --configuration Release --runtime win-x64 --self-contained true `
-  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+  --configuration Release --runtime win-x64 --self-contained false `
+  -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true `
   --output .\artifacts\portable
 ```
 
-To create an installer, install Inno Setup 6 and run `windows\installer\FoxyVPN.iss` with `SourceDir` pointing at `artifacts\portable`. The repository also includes a GitHub Actions workflow (`.github/workflows/windows-build.yml`) to build, test, publish the portable folder, and create an Inno Setup installer on a Windows runner.
+To create an installer, install Inno Setup 6 and run `windows\installer\FoxyVPN.iss` with `SourceDir` pointing at `artifacts\portable`. The compact release ZIP contains one installer, not duplicate self-contained installers. The installer checks for the .NET 8 Desktop Runtime and downloads it from Microsoft's official endpoint only if it is missing; this keeps the initial FoxyVPN download small while still allowing clean installs. The repository's GitHub Actions workflow (`.github/workflows/windows-build.yml`) builds, tests, publishes the framework-dependent app, and packages the installer on a Windows runner.
 
 ## Storage and privacy
 
