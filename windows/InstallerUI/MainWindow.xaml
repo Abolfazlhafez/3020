@@ -109,7 +109,7 @@
           <Button x:Name="CloseButton" Content="×" Width="38" Height="38" HorizontalAlignment="Right"
                   Style="{StaticResource GlassButton}" Padding="0" Click="CloseButton_Click"/>
           <TextBlock Text="FOXYVPN  ·  SETUP" VerticalAlignment="Center" FontSize="11"
-                     FontWeight="Bold" CharacterSpacing="180" Foreground="#DFFFFFFF"/>
+                     FontWeight="Bold" Foreground="#DFFFFFFF"/>
         </Grid>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
