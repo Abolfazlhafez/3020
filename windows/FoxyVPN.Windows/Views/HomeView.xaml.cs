@@ -21,7 +21,7 @@ public partial class HomeView : UserControl, IRefreshableView
     public HomeView()
     {
         InitializeComponent();
-        _runtimeUiTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _runtimeUiTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _runtimeUiTimer.Tick += (_, _) => UpdateRuntimeUi();
         _uptimeTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _uptimeTimer.Tick += (_, _) => UpdateUptime();
@@ -46,7 +46,6 @@ public partial class HomeView : UserControl, IRefreshableView
         UpdateRuntimeUi();
         _runtimeUiTimer.Start();
         UpdateUptime();
-        _uptimeTimer.Start();
     }
 
     private void HomeView_Unloaded(object sender, RoutedEventArgs e)
@@ -215,8 +214,19 @@ public partial class HomeView : UserControl, IRefreshableView
             ApplyOrbMode(OrbMode.Busy);
             return;
         }
+        var connectionActive = App.Services.IsProxyOnlySessionActive || App.Services.Tunnel.IsConnected;
+        if (connectionActive && !_uptimeTimer.IsEnabled)
+        {
+            UpdateUptime();
+            _uptimeTimer.Start();
+        }
+        else if (!connectionActive && _uptimeTimer.IsEnabled)
+        {
+            _uptimeTimer.Stop();
+            UpdateUptime();
+        }
         ApplyOrbMode(
-            App.Services.IsProxyOnlySessionActive || App.Services.Tunnel.IsConnected ? OrbMode.Active
+            connectionActive ? OrbMode.Active
             : App.Services.Tunnel.State == WindowsTunnelState.Faulted ? OrbMode.Fault
             : OrbMode.Offline);
         if (App.Services.IsProxyOnlySessionActive)

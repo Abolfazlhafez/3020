@@ -4,6 +4,7 @@ public sealed class AppSettings
 {
     public string ThemeMode { get; set; } = "System";
     public bool ReduceMotion { get; set; }
+    public bool LowResourceMode { get; set; } = true;
     public bool ConnectOnLaunch { get; set; }
     public bool StartWithWindows { get; set; }
     public bool StartMinimized { get; set; }

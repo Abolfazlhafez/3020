@@ -10,6 +10,7 @@
                     <TextBlock Text="General" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,6" />
                     <TextBlock Text="Appearance" Foreground="{DynamicResource SecondaryTextBrush}" />
                     <ComboBox x:Name="ThemeCombo" Width="220" HorizontalAlignment="Left"><ComboBoxItem Content="System"/><ComboBoxItem Content="Light"/><ComboBoxItem Content="Dark"/></ComboBox>
+                    <CheckBox x:Name="LowResourceModeCheck" Content="Low-resource mode (recommended: less CPU and background animation)" Margin="0,0,0,8" />
                     <CheckBox x:Name="ReduceMotionCheck" Content="Reduce motion (disable ambient loops and page slides)" Margin="0,0,0,10" />
                     <CheckBox x:Name="StartWithWindowsCheck" Content="Start FoxyVPN automatically when I sign in to Windows" Margin="0,9,0,0" />
                     <CheckBox x:Name="StartMinimizedCheck" Content="Start minimized on Windows sign-in" Margin="22,3,0,0" />

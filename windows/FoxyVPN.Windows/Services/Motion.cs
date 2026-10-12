@@ -18,7 +18,7 @@ internal static class Motion
         {
             var services = App.Services;
             if (services is null) return false;
-            return !services.Settings.Current.ReduceMotion && SystemParameters.ClientAreaAnimation;
+            return !services.Settings.Current.LowResourceMode && !services.Settings.Current.ReduceMotion && SystemParameters.ClientAreaAnimation;
         }
     }
 
